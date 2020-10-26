@@ -17,6 +17,7 @@ import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.StringTokenizer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
@@ -199,6 +200,10 @@ public class Client extends javax.swing.JFrame {
         }
         return null;
     }
+    
+    private void Check_Systax(String s) {
+        
+    }
 
     private void SetModelMessage(String s){        
         model.addElement(s);//thêm dữ liệu vào model chat
@@ -224,6 +229,7 @@ public class Client extends javax.swing.JFrame {
                 case MyString.LOCATION_IP -> {
                 }
                 case MyString.SCAN_PORT -> {
+                    data = new DataClient(fullName, message, option, "", dateTime);
                 }
                 case MyString.SIMSIMI -> {
                     String lang = "";
@@ -246,7 +252,7 @@ public class Client extends javax.swing.JFrame {
         try {
             ois = new ObjectInputStream(socket.getInputStream());//mở luồng đọc dữ liệu từ server
             DataClient data = (DataClient) ois.readObject();//đọc dữ liệu từ server
-            SetModelMessage(data.getFullName()+": " + data.getMessage() + " --> " + data.getDate());
+            SetModelMessage(data.getFullName()+": " + data.getMessage() + " --> " + data.getDate());        
         } catch (IOException | ClassNotFoundException ex) {
             Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -424,9 +430,17 @@ public class Client extends javax.swing.JFrame {
 
         jTextFieldInputChat.setEditable(false);
         jTextFieldInputChat.setFont(new java.awt.Font("Dialog", 0, 14)); // NOI18N
+        jTextFieldInputChat.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jTextFieldInputChatActionPerformed(evt);
+            }
+        });
         jTextFieldInputChat.addKeyListener(new java.awt.event.KeyAdapter() {
             public void keyPressed(java.awt.event.KeyEvent evt) {
                 jTextFieldInputChatKeyPressed(evt);
+            }
+            public void keyReleased(java.awt.event.KeyEvent evt) {
+                jTextFieldInputChatKeyReleased(evt);
             }
         });
 
@@ -453,7 +467,7 @@ public class Client extends javax.swing.JFrame {
         jPanel5Layout.setVerticalGroup(
             jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel5Layout.createSequentialGroup()
-                .addContainerGap(10, Short.MAX_VALUE)
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jTextFieldInputChat, javax.swing.GroupLayout.PREFERRED_SIZE, 55, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jButtonSend, javax.swing.GroupLayout.PREFERRED_SIZE, 59, javax.swing.GroupLayout.PREFERRED_SIZE))
@@ -657,6 +671,14 @@ public class Client extends javax.swing.JFrame {
     private void jRadioButtonSimsimiItemStateChanged(java.awt.event.ItemEvent evt) {//GEN-FIRST:event_jRadioButtonSimsimiItemStateChanged
         jComboBoxLanguage.setEnabled(jRadioButtonSimsimi.isSelected());
     }//GEN-LAST:event_jRadioButtonSimsimiItemStateChanged
+
+    private void jTextFieldInputChatActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextFieldInputChatActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_jTextFieldInputChatActionPerformed
+
+    private void jTextFieldInputChatKeyReleased(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_jTextFieldInputChatKeyReleased
+        Check_Systax(jTextFieldInputChat.getText());
+    }//GEN-LAST:event_jTextFieldInputChatKeyReleased
 
     /**
      * @param args the command line arguments

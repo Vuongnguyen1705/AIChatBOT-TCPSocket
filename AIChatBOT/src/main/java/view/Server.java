@@ -11,10 +11,12 @@ import java.awt.Font;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.StringTokenizer;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.logging.Level;
@@ -124,6 +126,24 @@ public class Server extends javax.swing.JFrame {
                 case MyString.LOCATION_IP -> {
                 }
                 case MyString.SCAN_PORT -> {
+                    Date date = new Date();
+                    SimpleDateFormat format = new SimpleDateFormat("hh:mm:ss dd/MM/yyyy");
+                    StringTokenizer token = new StringTokenizer(dataClient.getMessage(), ":");
+                    String hostname = token.nextToken();
+                    StringTokenizer portst = new StringTokenizer(token.nextToken(), ";");
+                    int beginPort = Integer.parseInt(portst.nextToken());
+                    int endPort = Integer.parseInt(portst.nextToken());
+                    String scanPort = "";
+                    for(int port=beginPort; port<=endPort; port++) {
+                        try {
+                            socket = new Socket();
+                            socket.connect(new InetSocketAddress(hostname, port), 200);
+                            scanPort += "Port " + port + " is opened<br/>";
+                        } catch (IOException ex) {
+                            scanPort += "Port " + port + " is closed<br/>";
+                        }
+                    }
+                    result = new DataClient("<html>Scan Port", scanPort + "</html>", "", "", format.format(date));    
                 }
                 case MyString.SIMSIMI -> {
                     Date date = new Date();
