@@ -1,22 +1,13 @@
 package view;
 
-import client.DataClient;
 import resource.MyColor;
-import resource.MyString;
-import service.simsimi.Request;
-import service.simsimi.Respone;
-import com.google.gson.Gson;
 import java.awt.Color;
 import java.awt.Font;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.StringTokenizer;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.logging.Level;
@@ -25,7 +16,6 @@ import java.util.regex.Pattern;
 import javax.swing.DefaultListModel;
 import javax.swing.JToggleButton;
 import javax.swing.border.LineBorder;
-import service.CallAPI;
 
 /**
  *
@@ -35,14 +25,14 @@ public class Server extends javax.swing.JFrame {
 
     private boolean flagPort = false;
     private ServerSocket server;
-    private Socket socket;
-    private ObjectInputStream ois;
-    private ObjectOutputStream oos;
+    private volatile Socket socket;
+    private volatile ObjectInputStream ois;
+    private volatile ObjectOutputStream oos;
     private final int numThread = 10;
-    private final StringBuilder strContent = new StringBuilder();
-    private final DefaultListModel<String> model = new DefaultListModel<>();
-    private boolean flagConnect = false;
+    private volatile StringBuilder strContent = new StringBuilder();
+    private volatile DefaultListModel<String> model = new DefaultListModel<>();    
     private ExecutorService executor;
+    private boolean isRunning = false;
 
     public Server() {
         initComponents();
@@ -51,38 +41,34 @@ public class Server extends javax.swing.JFrame {
 
     }
 
-    private void OpenServer(int port) {
-        flagConnect = true;
-        executor = Executors.newFixedThreadPool(numThread);
+    private boolean OpenServer(int port) {
+        executor = Executors.newCachedThreadPool();
         try {
             server = new ServerSocket(port);
+            return true;
         } catch (IOException ex) {
-            flagConnect = false;
             System.out.println(ex);
+            return false;
         }
     }
 
     private void ServerRunning() {
-        new Thread(() -> {
-            while (true) {
-                try {
-                    socket = server.accept();
-                    executor.execute(new Thread(() -> {
-                        model.addElement(socket.getInetAddress().getHostName() + " - " + socket.getInetAddress().getHostAddress());
-                        jListClientConnect.setModel(model);
-                        jListClientConnect.ensureIndexIsVisible(model.size() - 1);
-                        while (true) {
-                            ReturnResultToClient();
-                        }
-                    }));
-
-                } catch (IOException ex) {
-                    System.out.println(ex);
-                    Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                isRunning = true;
+                while (isRunning) {
+                    try {
+                        socket = server.accept();                        
+                        executor.execute(new WorkerServer(socket, model, jListClientConnect));
+                    } catch (IOException ex) {
+                        break;
+//                        System.out.println(ex);
+//                        Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
+                    }
                 }
-                if (flagConnect == false) {
-                    break;
-                }
+                System.out.println("finish");
+                executor.shutdown();
             }
         }).start();
 
@@ -90,7 +76,7 @@ public class Server extends javax.swing.JFrame {
 
     private void CloseConnect() {
         try {
-            flagConnect = false;
+            isRunning = false;
             strContent.append("Server Closed\n");
             jTextPaneContent.setText(strContent.toString());
             if (ois != null) {
@@ -106,78 +92,7 @@ public class Server extends javax.swing.JFrame {
         } catch (IOException ex) {
             Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
         }
-    }
-
-    private Respone ParseSimsimi(String json) {
-        Gson gson = new Gson();
-        Respone respone = gson.fromJson(json, Respone.class);
-        return respone;
-    }
-
-    private DataClient HandleInputFromClient() {
-        DataClient result = null;
-        try {
-            ois = new ObjectInputStream(socket.getInputStream());
-            DataClient dataClient = (DataClient) ois.readObject();
-            String option = dataClient.getOption();
-            switch (option) {
-                case MyString.WEATHER -> {
-                }
-                case MyString.LOCATION_IP -> {
-                }
-                case MyString.SCAN_PORT -> {
-                    Date date = new Date();
-                    SimpleDateFormat format = new SimpleDateFormat("hh:mm:ss dd/MM/yyyy");
-                    StringTokenizer token = new StringTokenizer(dataClient.getMessage(), ":");
-                    String hostname = token.nextToken();
-                    StringTokenizer portst = new StringTokenizer(token.nextToken(), ";");
-                    int beginPort = Integer.parseInt(portst.nextToken());
-                    int endPort = Integer.parseInt(portst.nextToken());
-                    String scanPort = "";
-                    for(int port=beginPort; port<=endPort; port++) {
-                        try {
-                            socket = new Socket();
-                            socket.connect(new InetSocketAddress(hostname, port), 200);
-                            scanPort += "Port " + port + " is opened<br/>";
-                        } catch (IOException ex) {
-                            scanPort += "Port " + port + " is closed<br/>";
-                        }
-                    }
-                    result = new DataClient("<html>Scan Port", scanPort + "</html>", "", "", format.format(date));    
-                }
-                case MyString.SIMSIMI -> {
-                    Date date = new Date();
-                    SimpleDateFormat format = new SimpleDateFormat("hh:mm:ss dd/MM/yyyy");
-                    Respone res = ParseSimsimi(CallAPI.ResponeSimsimi(new Request(dataClient.getMessage(), dataClient.getOptionDetail())));
-                    if (res.getStatus() == null) {
-                        result = new DataClient("Simsimi", "Tôi không biết", "", "", format.format(date));
-                    } else {
-                        result = switch (res.getStatus()) {
-                            case 200 ->
-                                new DataClient("Simsimi", res.getAtext(), "", "", format.format(date));
-                            case 429 ->
-                                new DataClient("Simsimi", "Requesst đã đạt giới hạn", "", "", format.format(date));
-                            default ->
-                                new DataClient("Simsimi", "Tôi không biết", "", "", format.format(date));
-                        };
-                    }
-                }
-            }
-        } catch (IOException | ClassNotFoundException ex) {
-            Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        return result;
-    }
-
-    private void ReturnResultToClient() {
-        try {
-            oos = new ObjectOutputStream(socket.getOutputStream());
-            oos.writeObject(HandleInputFromClient());
-            oos.flush();
-        } catch (IOException ex) {
-            Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
-        }
-    }
+    } 
 
     private void SetFont() {
         jLabelStatus.setFont(new Font("Dialog", Font.BOLD, 12));
@@ -215,8 +130,7 @@ public class Server extends javax.swing.JFrame {
             jLabelStatus.setForeground(MyColor.orange);
             CloseConnect();
         } else {
-            OpenServer(port);
-            if (flagConnect == true) {
+            if (OpenServer(port)) {
                 System.out.println("Server open");
                 jLabelStatus.setText("Server đang mở");
                 jLabelStatus.setForeground(MyColor.green);
@@ -359,19 +273,17 @@ public class Server extends javax.swing.JFrame {
             jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel2Layout.createSequentialGroup()
                 .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(jPanel2Layout.createSequentialGroup()
-                        .addContainerGap()
-                        .addComponent(jLabel2, javax.swing.GroupLayout.DEFAULT_SIZE, 288, Short.MAX_VALUE))
-                    .addComponent(jScrollPane2))
+                    .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 294, Short.MAX_VALUE)
+                    .addComponent(jLabel2, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, 294, Short.MAX_VALUE))
                 .addContainerGap())
         );
         jPanel2Layout.setVerticalGroup(
             jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel2Layout.createSequentialGroup()
-                .addContainerGap()
+                .addGap(45, 45, 45)
                 .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 383, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 350, Short.MAX_VALUE)
                 .addContainerGap())
         );
 
@@ -449,6 +361,7 @@ public class Server extends javax.swing.JFrame {
 
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
+            @Override
             public void run() {
                 new Server().setVisible(true);
             }
