@@ -5,7 +5,7 @@
  */
 package view;
 
-import client.DataClient;
+import DTO.DataClient;
 import resource.MyColor;
 import resource.MyString;
 import java.awt.Color;
@@ -17,7 +17,6 @@ import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.StringTokenizer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
@@ -37,8 +36,8 @@ public class Client extends javax.swing.JFrame {
     private boolean flagFullName = false;
     private boolean flagHost = false;
     private boolean flagPort = false;
-    private boolean flagConnect = false;
     private final DefaultListModel<String> model = new DefaultListModel<>();
+    private volatile boolean isRunning = false;
 
     public Client() {
         initComponents();
@@ -122,29 +121,28 @@ public class Client extends javax.swing.JFrame {
         }
     }
 
-    private void ConnectToServer(String host, int port) {
+    private boolean ConnectToServer(String host, int port) {
         host = jTextFieldServer.getText().trim();
         port = Integer.parseInt(jTextFieldPort.getText().trim());
         try {
             socket = new Socket(host, port);
             if (socket.isConnected()) {
-                flagConnect = true;
                 jLabelStatus.setText("Đã kết nối");
                 jLabelStatus.setForeground(MyColor.green);
+                return true;
             } else {
-                flagConnect = false;
                 jLabelStatus.setText("Kết nối thất bại");
                 jLabelStatus.setForeground(MyColor.red);
+                return false;
             }
         } catch (IOException ex) {
-            flagConnect = false;
             System.out.println(ex);
+            return false;
         }
     }
 
     private void CloseConnect() {
         try {
-            flagConnect = false;
             if (ois != null) {
                 ois.close();
             }
@@ -165,13 +163,19 @@ public class Client extends javax.swing.JFrame {
             jTextFieldServer.setEditable(true);
             jTextFieldPort.setEditable(true);
 
-            System.out.println("close");
+            System.out.println("Client close");
             jLabelStatus.setText("Chưa kết nối");
             jLabelStatus.setForeground(MyColor.orange);
-            CloseConnect();
+            try {
+                oos = new ObjectOutputStream(socket.getOutputStream());
+                oos.writeObject(new DataClient("", MyString.EXIT_PROGRAM, "", "", ""));
+                oos.flush();
+            } catch (IOException ex) {
+                Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+            }
         } else {
-            ConnectToServer(host, port);
-            if (flagConnect == true) {
+
+            if (ConnectToServer(host, port)) {
                 System.out.println("open");
                 jLabelStatus.setText("Đã kết nối");
                 jLabelStatus.setForeground(MyColor.green);
@@ -179,6 +183,7 @@ public class Client extends javax.swing.JFrame {
                 jTextFieldFullName.setEditable(false);
                 jTextFieldServer.setEditable(false);
                 jTextFieldPort.setEditable(false);
+                ClientRunning();
 
             } else {
                 System.out.println("thất bại");
@@ -200,16 +205,17 @@ public class Client extends javax.swing.JFrame {
         }
         return null;
     }
-    
+
     private void Check_Systax(String s) {
-        
+
     }
 
-    private void SetModelMessage(String s){        
+    private void SetModelMessage(String s) {
         model.addElement(s);//thêm dữ liệu vào model chat
         jListMessage.setModel(model);//set dữ liệu hiển thị lên list chat
         jListMessage.ensureIndexIsVisible(model.size() - 1);//cuộn list xuống tin nhắn mới nhất
     }
+
     private void SendData() {
         Date date = new Date();
         SimpleDateFormat format = new SimpleDateFormat("hh:mm:ss dd/MM/yyyy");
@@ -217,7 +223,7 @@ public class Client extends javax.swing.JFrame {
         String fullName = jTextFieldFullName.getText().trim();
         String message = jTextFieldInputChat.getText().trim();
         String dateTime = format.format(date);
-        
+
         String option = OptionRadioSelected();//kiểm tra tùy chọn chat
         SetModelMessage(fullName + ": " + message + " --> " + dateTime);//set hiển thị tin nhắn     
         try {
@@ -250,26 +256,29 @@ public class Client extends javax.swing.JFrame {
 
     private void ReceiveData() {
         try {
-            ois = new ObjectInputStream(socket.getInputStream());//mở luồng đọc dữ liệu từ server
+            ois = new ObjectInputStream(socket.getInputStream());//mở luồng đọc dữ liệu từ server            
             DataClient data = (DataClient) ois.readObject();//đọc dữ liệu từ server
-            SetModelMessage(data.getFullName()+": " + data.getMessage() + " --> " + data.getDate());        
+            if (data.getMessage().equals(MyString.EXIT_PROGRAM)) {
+                isRunning = false;
+                CloseConnect();
+            } else {
+                SetModelMessage(data.getFullName() + ": " + data.getMessage() + " --> " + data.getDate());
+            }
         } catch (IOException | ClassNotFoundException ex) {
+            System.err.println("Lỗiiii");
             Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
 
     private void ClientRunning() {
-        HandleConnection();
-        new Thread(() -> {
-            boolean running = true;
-            while (running == true) {
-                while (true) {
-                    if (flagConnect == false) {
-                        running = false;
-                        break;
-                    }
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                isRunning = true;
+                while (isRunning) {
                     ReceiveData();
                 }
+                System.out.println("finish");
             }
         }).start();
 
@@ -621,7 +630,7 @@ public class Client extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void jToggleButtonConnectActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jToggleButtonConnectActionPerformed
-        ClientRunning();
+        HandleConnection();
     }//GEN-LAST:event_jToggleButtonConnectActionPerformed
 
     private void jTextFieldFullNameKeyReleased(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_jTextFieldFullNameKeyReleased
