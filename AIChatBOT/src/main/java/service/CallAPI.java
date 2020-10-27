@@ -1,6 +1,6 @@
 package service;
 
-import resource.MyString;
+import utils.MyString;
 import service.simsimi.Request;
 import java.io.IOException;
 import java.net.URI;

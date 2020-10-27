@@ -14,7 +14,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.DefaultListModel;
 import javax.swing.JList;
-import resource.MyString;
+import javax.swing.JTextPane;
+import utils.MyString;
 import service.CallAPI;
 import service.simsimi.Request;
 import service.simsimi.Respone;
@@ -25,18 +26,17 @@ import service.simsimi.Respone;
  */
 public class WorkerServer extends Thread {
 
-    private Socket socket;
-    private final DefaultListModel<String> model;
-    private final JList jListClientConnect;
+    private final Socket socket;
+    private final JTextPane jTextPaneClientConnect;
+    private StringBuilder clientConnect = new StringBuilder();
     private ObjectInputStream ois;
     private ObjectOutputStream oos;
-    private String close = "";
     private boolean isRunning = false;
 
-    public WorkerServer(Socket socket, DefaultListModel<String> model, JList jListClientConnect) {
+    public WorkerServer(Socket socket, StringBuilder clientConnect, JTextPane jTextPaneClientConnect) {
         this.socket = socket;
-        this.model = model;
-        this.jListClientConnect = jListClientConnect;
+        this.clientConnect = clientConnect;
+        this.jTextPaneClientConnect = jTextPaneClientConnect;
     }
 
     @Override
@@ -47,9 +47,13 @@ public class WorkerServer extends Thread {
     private void xuLy() {
         try {
             System.out.println(socket.getInetAddress().getHostName() + " - " + socket.getInetAddress().getHostAddress() + " - " + socket.getPort());
-            model.addElement(socket.getInetAddress().getHostName() + " - " + socket.getInetAddress().getHostAddress() + " - " + socket.getPort());
-            jListClientConnect.setModel(model);
-            jListClientConnect.ensureIndexIsVisible(model.size() - 1);
+            clientConnect.append(socket.getInetAddress().getHostName())
+                    .append(" - ")
+                    .append(socket.getInetAddress().getHostAddress())
+                    .append(" - ")
+                    .append(socket.getPort())
+                    .append("\n");
+            jTextPaneClientConnect.setText(clientConnect.toString());
 
             ois = new ObjectInputStream(socket.getInputStream());
             oos = new ObjectOutputStream(socket.getOutputStream());
@@ -65,20 +69,16 @@ public class WorkerServer extends Thread {
 
     private void HandleInputFromClient() {
         try {
-//            ois = new ObjectInputStream(socket.getInputStream());
             DataClient result = null;
-            if (ois != null) {
-                System.out.println("không null");
-            } else {
-                System.out.println("nulllllll");
-            }
-            DataClient dataClient = (DataClient) ois.readObject();
+            DataClient dataClient = (DataClient) ois.readObject();//Đọc dữ liệu từ client trả về object DataClient
             System.out.println(dataClient.getMessage());
-            String option = dataClient.getOption();
-            switch (option) {
+            String option = dataClient.getOption();//lấy option của client gửi
+            switch (option) {//check option
                 case MyString.WEATHER -> {
+                    //Thời tiết
                 }
                 case MyString.LOCATION_IP -> {
+                    //Vị trí IP
                 }
                 case MyString.SCAN_PORT -> {
                     Date date = new Date();
@@ -129,10 +129,13 @@ public class WorkerServer extends Thread {
 //            oos = new ObjectOutputStream(socket.getOutputStream());
             oos.writeObject(result);
             oos.flush();
-        } catch (IOException | ClassNotFoundException ex) {
-            System.out.println("Lỗiiiiii");
+        } catch (IOException ex) {
+            System.out.println("Lỗiiiiii IO");
             System.out.println(ex);
             Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (ClassNotFoundException ex) {
+            System.out.println("not found");
+            Logger.getLogger(WorkerServer.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
 

@@ -1,13 +1,8 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package view;
 
 import DTO.DataClient;
 import resource.MyColor;
-import resource.MyString;
+import utils.MyString;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.event.KeyEvent;
@@ -23,6 +18,7 @@ import java.util.regex.Pattern;
 import javax.swing.DefaultListModel;
 import javax.swing.JToggleButton;
 import javax.swing.border.LineBorder;
+import utils.PatternRegEx;
 
 /**
  *
@@ -58,27 +54,27 @@ public class Client extends javax.swing.JFrame {
         String sSimsimi = "Chọn ngôn ngữ mà muốn sử dụng để chat, sau đó nhập vào nội dung bạn muốn chat với BOT\nVí dụ: Chọn Tiếng Việt, nhập vào \"Xin chào\",\"Hôm nay tôi buồn quá\",\"Tôi có đẹp trai không?\"";
 
         jRadioButtonWeather.addItemListener((e) -> {
+            CheckInputByRadio();
             jTextPaneTutorial.setText(sWeather);
         });
         jRadioButtonLocationIP.addItemListener((e) -> {
+            CheckInputByRadio();
             jTextPaneTutorial.setText(sIP);
         });
         jRadioButtonPort.addItemListener((e) -> {
+            CheckInputByRadio();
             jTextPaneTutorial.setText(sPort);
         });
         jRadioButtonSimsimi.addItemListener((e) -> {
+            CheckInputByRadio();
             jTextPaneTutorial.setText(sSimsimi);
         });
     }
 
     private void Validate(int i) {
-        Pattern patternFullName = Pattern.compile("[aAàÀảẢãÃáÁạẠăĂằẰẳẲẵẴắẮặẶâÂầẦẩẨẫẪấẤậẬbBcCdDđĐeEèÈẻẺẽẼéÉẹẸêÊềỀểỂễỄếẾệỆfFgGhHiIìÌỉỈĩĨíÍịỊjJkKlLmMnNoOòÒỏỎõÕóÓọỌôÔồỒổỔỗỖốỐộỘơƠờỜởỞỡỠớỚợỢpPqQrRsStTuUùÙủỦũŨúÚụỤưƯừỪửỬữỮứỨựỰvVwWxXyYỳỲỷỶỹỸýÝỵỴzZ\\s]+");
-        Pattern patternServerHost = Pattern.compile("^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$");
-        Pattern patternPort = Pattern.compile("^[1-9]\\d+$");
-
         switch (i) {
             case 1 -> {
-                if (patternFullName.matcher(jTextFieldFullName.getText().trim()).matches()) {
+                if (jTextFieldFullName.getText().trim().matches(PatternRegEx.patternCharacter)) {
                     jTextFieldFullName.setBorder(new LineBorder(MyColor.green, 2));
                     flagFullName = true;
                 } else {
@@ -88,7 +84,7 @@ public class Client extends javax.swing.JFrame {
                 }
             }//Validate FullName
             case 2 -> {
-                if (patternServerHost.matcher(jTextFieldServer.getText().trim()).matches()) {
+                if (jTextFieldServer.getText().trim().matches(PatternRegEx.patternIP)) {
                     jTextFieldServer.setBorder(new LineBorder(MyColor.green, 2));
                     flagHost = true;
                 } else {
@@ -99,9 +95,9 @@ public class Client extends javax.swing.JFrame {
             case 3 -> {
                 String portString = jTextFieldPort.getText().trim();
 
-                if (patternPort.matcher(portString).matches()) {
+                if (portString.matches(PatternRegEx.patternPort)) {
                     int portInt = Integer.parseInt(portString);
-                    if ((portInt < 1024 || portInt > 49151)) {
+                    if ((portInt < 1024 || portInt > 65535)) {
                         jTextFieldPort.setBorder(new LineBorder(MyColor.red, 2));
                         flagPort = false;
                     } else {
@@ -126,7 +122,13 @@ public class Client extends javax.swing.JFrame {
         port = Integer.parseInt(jTextFieldPort.getText().trim());
         try {
             socket = new Socket(host, port);
-            if (socket.isConnected()) {
+            if (socket.isConnected() && !socket.isClosed()) {
+                try {
+                    oos = new ObjectOutputStream(socket.getOutputStream());
+                    ois = new ObjectInputStream(socket.getInputStream());
+                } catch (IOException ex) {
+                    Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+                }
                 jLabelStatus.setText("Đã kết nối");
                 jLabelStatus.setForeground(MyColor.green);
                 return true;
@@ -167,7 +169,6 @@ public class Client extends javax.swing.JFrame {
             jLabelStatus.setText("Chưa kết nối");
             jLabelStatus.setForeground(MyColor.orange);
             try {
-                oos = new ObjectOutputStream(socket.getOutputStream());
                 oos.writeObject(new DataClient("", MyString.EXIT_PROGRAM, "", "", ""));
                 oos.flush();
             } catch (IOException ex) {
@@ -183,6 +184,7 @@ public class Client extends javax.swing.JFrame {
                 jTextFieldFullName.setEditable(false);
                 jTextFieldServer.setEditable(false);
                 jTextFieldPort.setEditable(false);
+
                 ClientRunning();
 
             } else {
@@ -196,6 +198,7 @@ public class Client extends javax.swing.JFrame {
 
     private String OptionRadioSelected() {
         if (jRadioButtonWeather.isSelected()) {
+            return MyString.WEATHER;
         } else if (jRadioButtonLocationIP.isSelected()) {
             return MyString.LOCATION_IP;
         } else if (jRadioButtonPort.isSelected()) {
@@ -203,11 +206,61 @@ public class Client extends javax.swing.JFrame {
         } else {
             return MyString.SIMSIMI;
         }
-        return null;
     }
 
-    private void Check_Systax(String s) {
+    private void CheckInputByRadio() {
+        String input = jTextFieldInputChat.getText().trim();
+        if (jRadioButtonWeather.isSelected()) {
+            CheckSystaxInput(input);
+        } else if (jRadioButtonLocationIP.isSelected()) {
+            CheckSystaxInput(input);
+        } else if (jRadioButtonPort.isSelected()) {
+            CheckSystaxInput(input);
+        } else {
+            CheckSystaxInput(input);
+        }
+    }
 
+    private boolean CheckSystaxInput(String s) {
+        String option = OptionRadioSelected();
+        switch (option) {
+            case MyString.WEATHER -> {
+                if (s.matches(PatternRegEx.patternCharacter)) {
+                    jTextFieldInputChat.setBorder(new LineBorder(MyColor.green, 2));
+                    return true;
+                } else {
+                    jTextFieldInputChat.setBorder(new LineBorder(MyColor.red, 2));
+                    return false;
+                }
+            }
+            case MyString.LOCATION_IP -> {
+                if (s.matches(PatternRegEx.patternIP)) {
+                    jTextFieldInputChat.setBorder(new LineBorder(MyColor.green, 2));
+                    return true;
+                } else {
+                    jTextFieldInputChat.setBorder(new LineBorder(MyColor.red, 2));
+                    return false;
+                }
+            }
+            case MyString.SCAN_PORT -> {
+                if (s.matches(PatternRegEx.patternInputScanPort)) {
+                    jTextFieldInputChat.setBorder(new LineBorder(MyColor.green, 2));
+                    return true;
+                } else {
+                    jTextFieldInputChat.setBorder(new LineBorder(MyColor.red, 2));
+                    return false;
+                }
+            }
+            default -> {
+                if (!jTextFieldInputChat.getText().trim().equals("")) {
+                    jTextFieldInputChat.setBorder(new LineBorder(MyColor.green, 2));
+                    return true;
+                } else {
+                    jTextFieldInputChat.setBorder(new LineBorder(MyColor.red, 2));
+                    return false;
+                }
+            }
+        }
     }
 
     private void SetModelMessage(String s) {
@@ -226,8 +279,8 @@ public class Client extends javax.swing.JFrame {
 
         String option = OptionRadioSelected();//kiểm tra tùy chọn chat
         SetModelMessage(fullName + ": " + message + " --> " + dateTime);//set hiển thị tin nhắn     
+        SetModelMessage("......");
         try {
-            oos = new ObjectOutputStream(socket.getOutputStream());//Mở luồng ghi dữ liệu đến server
             DataClient data = null;
             switch (option) {
                 case MyString.WEATHER -> {
@@ -256,12 +309,12 @@ public class Client extends javax.swing.JFrame {
 
     private void ReceiveData() {
         try {
-            ois = new ObjectInputStream(socket.getInputStream());//mở luồng đọc dữ liệu từ server            
             DataClient data = (DataClient) ois.readObject();//đọc dữ liệu từ server
             if (data.getMessage().equals(MyString.EXIT_PROGRAM)) {
                 isRunning = false;
                 CloseConnect();
             } else {
+                model.remove(model.getSize() - 1);
                 SetModelMessage(data.getFullName() + ": " + data.getMessage() + " --> " + data.getDate());
             }
         } catch (IOException | ClassNotFoundException ex) {
@@ -439,11 +492,6 @@ public class Client extends javax.swing.JFrame {
 
         jTextFieldInputChat.setEditable(false);
         jTextFieldInputChat.setFont(new java.awt.Font("Dialog", 0, 14)); // NOI18N
-        jTextFieldInputChat.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jTextFieldInputChatActionPerformed(evt);
-            }
-        });
         jTextFieldInputChat.addKeyListener(new java.awt.event.KeyAdapter() {
             public void keyPressed(java.awt.event.KeyEvent evt) {
                 jTextFieldInputChatKeyPressed(evt);
@@ -651,20 +699,20 @@ public class Client extends javax.swing.JFrame {
             jToggleButtonConnect.setBackground(MyColor.red);
             jToggleButtonConnect.setForeground(Color.white);
             jTextFieldInputChat.setEditable(true);
-            jButtonSend.setEnabled(true);
         } else {
             jToggleButtonConnect.setText("Kết nối");
             jToggleButtonConnect.setBackground(MyColor.green);
             jToggleButtonConnect.setForeground(Color.white);
             jTextFieldInputChat.setEditable(false);
-            jButtonSend.setEnabled(false);
         }
     }//GEN-LAST:event_jToggleButtonConnectStateChanged
 
     private void jTextFieldInputChatKeyPressed(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_jTextFieldInputChatKeyPressed
         if (evt.getKeyCode() == KeyEvent.VK_ENTER) {
-            SendData();
-            jTextFieldInputChat.setText("");
+            if (CheckSystaxInput(jTextFieldInputChat.getText())) {
+                SendData();
+                jTextFieldInputChat.setText("");
+            }
         }
     }//GEN-LAST:event_jTextFieldInputChatKeyPressed
 
@@ -681,12 +729,11 @@ public class Client extends javax.swing.JFrame {
         jComboBoxLanguage.setEnabled(jRadioButtonSimsimi.isSelected());
     }//GEN-LAST:event_jRadioButtonSimsimiItemStateChanged
 
-    private void jTextFieldInputChatActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextFieldInputChatActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jTextFieldInputChatActionPerformed
-
     private void jTextFieldInputChatKeyReleased(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_jTextFieldInputChatKeyReleased
-        Check_Systax(jTextFieldInputChat.getText());
+        if (CheckSystaxInput(jTextFieldInputChat.getText())) {
+            jButtonSend.setEnabled(true);
+        } else
+            jButtonSend.setEnabled(false);
     }//GEN-LAST:event_jTextFieldInputChatKeyReleased
 
     /**
