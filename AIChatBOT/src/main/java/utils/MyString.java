@@ -1,4 +1,4 @@
-package resource;
+package utils;
 
 /**
  *
@@ -12,7 +12,8 @@ public class MyString {
     public static final String SCAN_PORT = "scanPort";
     public static final String EXIT_PROGRAM="exitProgram";
     
-    public static final String API_KEY_SIMSIMI = "9kdNP6HzKh5J3jxWzSg6olvc-yxRM~ppTg2G5FIa";//CNjyGqyZU_4NO-Co_YacgPiAydY4lZ4ayEOrLOsw
+    //API Key
+    public static final String API_KEY_SIMSIMI = "CNjyGqyZU_4NO-Co_YacgPiAydY4lZ4ayEOrLOsw";
     public static final String API_KEY_WEATHER = "0d0ea27651db38d1d4fb5ffbb571b33a";
     public static final String API_KEY_LOCATION_IP = "3d34dd2ce5136e804a14f879e0e86eb2";
 

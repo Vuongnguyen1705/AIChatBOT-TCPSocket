@@ -12,10 +12,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.regex.Pattern;
-import javax.swing.DefaultListModel;
 import javax.swing.JToggleButton;
 import javax.swing.border.LineBorder;
+import utils.PatternRegEx;
 
 /**
  *
@@ -29,10 +28,10 @@ public class Server extends javax.swing.JFrame {
     private volatile ObjectInputStream ois;
     private volatile ObjectOutputStream oos;
     private final int numThread = 10;
-    private volatile StringBuilder strContent = new StringBuilder();
-    private volatile DefaultListModel<String> model = new DefaultListModel<>();    
+    private StringBuilder strContent = new StringBuilder();
     private ExecutorService executor;
     private boolean isRunning = false;
+    private volatile StringBuilder clientConnect=new StringBuilder();
 
     public Server() {
         initComponents();
@@ -59,19 +58,16 @@ public class Server extends javax.swing.JFrame {
                 isRunning = true;
                 while (isRunning) {
                     try {
-                        socket = server.accept();                        
-                        executor.execute(new WorkerServer(socket, model, jListClientConnect));
+                        Socket socket = server.accept();
+                        executor.execute(new WorkerServer(socket,clientConnect, jTextPaneClientConnect));
                     } catch (IOException ex) {
                         break;
-//                        System.out.println(ex);
-//                        Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
                     }
                 }
-                System.out.println("finish");
                 executor.shutdown();
+                System.out.println("finish");
             }
         }).start();
-
     }
 
     private void CloseConnect() {
@@ -92,7 +88,7 @@ public class Server extends javax.swing.JFrame {
         } catch (IOException ex) {
             Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
         }
-    } 
+    }
 
     private void SetFont() {
         jLabelStatus.setFont(new Font("Dialog", Font.BOLD, 12));
@@ -100,12 +96,11 @@ public class Server extends javax.swing.JFrame {
     }
 
     private void Validate() {
-        Pattern patternPort = Pattern.compile("^[1-9]\\d+$");
         String portString = jTextFieldPort.getText().trim();
 
-        if (patternPort.matcher(portString).matches()) {
+        if (portString.matches(PatternRegEx.patternPort)) {
             int portInt = Integer.parseInt(portString);
-            if ((portInt < 1024 || portInt > 49151)) {
+            if ((portInt < 1024 || portInt > 65535)) {
                 jTextFieldPort.setBorder(new LineBorder(MyColor.red, 2));
                 flagPort = false;
             } else {
@@ -166,8 +161,8 @@ public class Server extends javax.swing.JFrame {
         jLabelStatus = new javax.swing.JLabel();
         jPanel2 = new javax.swing.JPanel();
         jLabel2 = new javax.swing.JLabel();
-        jScrollPane2 = new javax.swing.JScrollPane();
-        jListClientConnect = new javax.swing.JList<>();
+        jScrollPane3 = new javax.swing.JScrollPane();
+        jTextPaneClientConnect = new javax.swing.JTextPane();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -257,7 +252,7 @@ public class Server extends javax.swing.JFrame {
                     .addComponent(jLabel4)
                     .addComponent(jLabelStatus))
                 .addGap(11, 11, 11)
-                .addComponent(jScrollPane1)
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 350, Short.MAX_VALUE)
                 .addContainerGap())
         );
 
@@ -265,7 +260,7 @@ public class Server extends javax.swing.JFrame {
         jLabel2.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
         jLabel2.setText("Client đang kết nối");
 
-        jScrollPane2.setViewportView(jListClientConnect);
+        jScrollPane3.setViewportView(jTextPaneClientConnect);
 
         javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
         jPanel2.setLayout(jPanel2Layout);
@@ -273,8 +268,10 @@ public class Server extends javax.swing.JFrame {
             jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel2Layout.createSequentialGroup()
                 .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 294, Short.MAX_VALUE)
-                    .addComponent(jLabel2, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, 294, Short.MAX_VALUE))
+                    .addComponent(jLabel2, javax.swing.GroupLayout.DEFAULT_SIZE, 294, Short.MAX_VALUE)
+                    .addGroup(jPanel2Layout.createSequentialGroup()
+                        .addContainerGap()
+                        .addComponent(jScrollPane3)))
                 .addContainerGap())
         );
         jPanel2Layout.setVerticalGroup(
@@ -283,7 +280,7 @@ public class Server extends javax.swing.JFrame {
                 .addGap(45, 45, 45)
                 .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 350, Short.MAX_VALUE)
+                .addComponent(jScrollPane3)
                 .addContainerGap())
         );
 
@@ -374,13 +371,13 @@ public class Server extends javax.swing.JFrame {
     private javax.swing.JLabel jLabel3;
     private javax.swing.JLabel jLabel4;
     private javax.swing.JLabel jLabelStatus;
-    private javax.swing.JList<String> jListClientConnect;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel2;
     private javax.swing.JPanel jPanel3;
     private javax.swing.JScrollPane jScrollPane1;
-    private javax.swing.JScrollPane jScrollPane2;
+    private javax.swing.JScrollPane jScrollPane3;
     private javax.swing.JTextField jTextFieldPort;
+    private javax.swing.JTextPane jTextPaneClientConnect;
     private javax.swing.JTextPane jTextPaneContent;
     private javax.swing.JToggleButton jToggleButtonOpenConnect;
     // End of variables declaration//GEN-END:variables
