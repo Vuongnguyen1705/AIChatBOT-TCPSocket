@@ -260,6 +260,7 @@ public class Server extends javax.swing.JFrame {
         jLabel2.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
         jLabel2.setText("Client đang kết nối");
 
+        jTextPaneClientConnect.setEditable(false);
         jScrollPane3.setViewportView(jTextPaneClientConnect);
 
         javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
