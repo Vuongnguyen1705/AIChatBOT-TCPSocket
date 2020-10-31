@@ -16,6 +16,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
 import javax.swing.DefaultListModel;
+import javax.swing.ImageIcon;
 import javax.swing.JToggleButton;
 import javax.swing.border.LineBorder;
 import utils.PatternRegEx;
@@ -502,8 +503,9 @@ public class Client extends javax.swing.JFrame {
         });
 
         jButtonSend.setFont(new java.awt.Font("Dialog", 1, 18)); // NOI18N
-        jButtonSend.setText("Gửi");
+        jButtonSend.setIcon(new ImageIcon("src\\main\\java\\resource\\send32px.png"));
         jButtonSend.setEnabled(false);
+        jButtonSend.setHideActionText(true);
         jButtonSend.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jButtonSendActionPerformed(evt);
