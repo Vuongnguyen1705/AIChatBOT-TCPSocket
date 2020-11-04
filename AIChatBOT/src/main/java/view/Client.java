@@ -1,7 +1,7 @@
 package view;
 
 import DTO.DataClient;
-import resource.MyColor;
+import utils.MyColor;
 import utils.MyString;
 import java.awt.Color;
 import java.awt.Font;
@@ -14,10 +14,13 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.regex.Pattern;
 import javax.swing.DefaultListModel;
+import javax.swing.Icon;
+import javax.swing.ImageIcon;
+import javax.swing.JOptionPane;
 import javax.swing.JToggleButton;
 import javax.swing.border.LineBorder;
+import javax.swing.plaf.IconUIResource;
 import utils.PatternRegEx;
 
 /**
@@ -32,12 +35,13 @@ public class Client extends javax.swing.JFrame {
     private boolean flagFullName = false;
     private boolean flagHost = false;
     private boolean flagPort = false;
-    private final DefaultListModel<String> model = new DefaultListModel<>();
+    private final DefaultListModel<DataClient> model = new DefaultListModel<>();
     private volatile boolean isRunning = false;
+    private int x, y;
 
     public Client() {
         initComponents();
-        setLocationRelativeTo(null);
+        jPanelTop.add(new TitleBar(this));
         EventRadioButton();
         SetFont();
     }
@@ -50,7 +54,7 @@ public class Client extends javax.swing.JFrame {
     private void EventRadioButton() {
         String sWeather = "Chọn xem ngày hiện tại hoặc 7 ngày kế tiếp, sau đó nhập vào tên khu vực hoặc thành phố cần tra cứu\nVí dụ:Chọn Ngày hiện tại, nhập vào Long An, Ho Chi Minh City, Thủ Đức";
         String sIP = "Nhập vào địa chỉ IP cần xác định vị trí\nVí dụ: 103.129.191.96\n*Lưu ý: Địa chỉ IP phải là địa chỉ public";
-        String sPort = "Nhập vào địa chỉ IP và khoảng giới hạn các port cần quét\nVí dụ: 192.168.123.123:1;10000";
+        String sPort = "Nhập vào địa chỉ IP và khoảng giới hạn các port cần quét\nVí dụ: 192.168.123.123:1;100";
         String sSimsimi = "Chọn ngôn ngữ mà muốn sử dụng để chat, sau đó nhập vào nội dung bạn muốn chat với BOT\nVí dụ: Chọn Tiếng Việt, nhập vào \"Xin chào\",\"Hôm nay tôi buồn quá\",\"Tôi có đẹp trai không?\"";
 
         jRadioButtonWeather.addItemListener((e) -> {
@@ -169,7 +173,7 @@ public class Client extends javax.swing.JFrame {
             jLabelStatus.setText("Chưa kết nối");
             jLabelStatus.setForeground(MyColor.orange);
             try {
-                oos.writeObject(new DataClient("", MyString.EXIT_PROGRAM, "", "", ""));
+                oos.writeObject(new DataClient(1, MyString.EXIT_PROGRAM, "", "", ""));
                 oos.flush();
             } catch (IOException ex) {
                 Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
@@ -244,8 +248,15 @@ public class Client extends javax.swing.JFrame {
             }
             case MyString.SCAN_PORT -> {
                 if (s.matches(PatternRegEx.patternInputScanPort)) {
-                    jTextFieldInputChat.setBorder(new LineBorder(MyColor.green, 2));
-                    return true;
+                    String[] arr = s.split(":");
+                    String[] arr1 = arr[1].split(";");
+                    if (Integer.parseInt(arr1[0]) > Integer.parseInt(arr1[1])) {
+                        jTextFieldInputChat.setBorder(new LineBorder(MyColor.red, 2));
+                        return false;
+                    } else {
+                        jTextFieldInputChat.setBorder(new LineBorder(MyColor.green, 2));
+                        return true;
+                    }
                 } else {
                     jTextFieldInputChat.setBorder(new LineBorder(MyColor.red, 2));
                     return false;
@@ -263,23 +274,22 @@ public class Client extends javax.swing.JFrame {
         }
     }
 
-    private void SetModelMessage(String s) {
-        model.addElement(s);//thêm dữ liệu vào model chat
-        jListMessage.setModel(model);//set dữ liệu hiển thị lên list chat
+    private void SetModelMessage(int type, String mess, String time) {
+        jListMessage.setCellRenderer(new Item());
+        model.addElement(new DataClient(type, mess, "", "", time));//thêm dữ liệu vào model chat
+        jListMessage.setModel(model);//set dữ liệu hiển thị lên list chat      
         jListMessage.ensureIndexIsVisible(model.size() - 1);//cuộn list xuống tin nhắn mới nhất
     }
 
     private void SendData() {
         Date date = new Date();
-        SimpleDateFormat format = new SimpleDateFormat("hh:mm:ss dd/MM/yyyy");
+        SimpleDateFormat format = new SimpleDateFormat("hh:mm:ss");
 
-        String fullName = jTextFieldFullName.getText().trim();
         String message = jTextFieldInputChat.getText().trim();
         String dateTime = format.format(date);
-
         String option = OptionRadioSelected();//kiểm tra tùy chọn chat
-        SetModelMessage(fullName + ": " + message + " --> " + dateTime);//set hiển thị tin nhắn     
-        SetModelMessage("......");
+        SetModelMessage(2, new MessHTML(message, "right", MyColor.bgMyMess, "white").toString(), dateTime);//set hiển thị tin nhắn     
+        SetModelMessage(1, new MessHTML("...", "left", MyColor.bgBotMess, "black").toString(), dateTime);
         try {
             DataClient data = null;
             switch (option) {
@@ -288,7 +298,7 @@ public class Client extends javax.swing.JFrame {
                 case MyString.LOCATION_IP -> {
                 }
                 case MyString.SCAN_PORT -> {
-                    data = new DataClient(fullName, message, option, "", dateTime);
+                    data = new DataClient(0, message, option, "", dateTime);
                 }
                 case MyString.SIMSIMI -> {
                     String lang = "";
@@ -297,7 +307,7 @@ public class Client extends javax.swing.JFrame {
                     } else {
                         lang = "en";
                     }
-                    data = new DataClient(fullName, message, option, lang, dateTime);
+                    data = new DataClient(0, message, option, lang, dateTime);
                 }
             }
             oos.writeObject(data);
@@ -315,7 +325,7 @@ public class Client extends javax.swing.JFrame {
                 CloseConnect();
             } else {
                 model.remove(model.getSize() - 1);
-                SetModelMessage(data.getFullName() + ": " + data.getMessage() + " --> " + data.getDate());
+                SetModelMessage(1, new MessHTML(data.getMessage(), "left", MyColor.bgBotMess, "black").toString(), data.getDate());
             }
         } catch (IOException | ClassNotFoundException ex) {
             System.err.println("Lỗiiii");
@@ -342,8 +352,8 @@ public class Client extends javax.swing.JFrame {
     private void initComponents() {
 
         buttonGroupOptionChat = new javax.swing.ButtonGroup();
-        jLabel6 = new javax.swing.JLabel();
         jPanel1 = new javax.swing.JPanel();
+        jPanelTop = new javax.swing.JPanel();
         jPanel3 = new javax.swing.JPanel();
         jLabel1 = new javax.swing.JLabel();
         jTextFieldFullName = new javax.swing.JTextField();
@@ -354,6 +364,7 @@ public class Client extends javax.swing.JFrame {
         jToggleButtonConnect = new javax.swing.JToggleButton();
         jLabelStatusTitle = new javax.swing.JLabel();
         jLabelStatus = new javax.swing.JLabel();
+        jLabel6 = new javax.swing.JLabel();
         jPanel4 = new javax.swing.JPanel();
         jScrollPaneMessage = new javax.swing.JScrollPane();
         jListMessage = new javax.swing.JList<>();
@@ -373,13 +384,32 @@ public class Client extends javax.swing.JFrame {
         jComboBoxDate = new javax.swing.JComboBox<>();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        setBackground(java.awt.Color.white);
+        setIconImage(new ImageIcon("src\\main\\java\\images\\icons8-chat-48.png").getImage());
+        setUndecorated(true);
+        setPreferredSize(new java.awt.Dimension(800, 608));
 
-        jLabel6.setFont(new java.awt.Font("Dialog", 1, 25)); // NOI18N
-        jLabel6.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        jLabel6.setText("CLIENT");
+        jPanel1.setBackground(MyColor.white);
+        jPanel1.setBorder(javax.swing.BorderFactory.createLineBorder(MyColor.titleBar));
+
+        jPanelTop.setBackground(MyColor.titleBar);
+        jPanelTop.addMouseMotionListener(new java.awt.event.MouseMotionAdapter() {
+            public void mouseDragged(java.awt.event.MouseEvent evt) {
+                jPanelTopMouseDragged(evt);
+            }
+        });
+        jPanelTop.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mousePressed(java.awt.event.MouseEvent evt) {
+                jPanelTopMousePressed(evt);
+            }
+        });
+        jPanelTop.setLayout(new java.awt.FlowLayout(java.awt.FlowLayout.RIGHT, 10, 5));
+
+        jPanel3.setBackground(MyColor.white);
 
         jLabel1.setText("Full Name:");
 
+        jTextFieldFullName.setBackground(MyColor.input);
         jTextFieldFullName.setBorder(javax.swing.BorderFactory.createEmptyBorder(5, 5, 5, 5));
         jTextFieldFullName.addKeyListener(new java.awt.event.KeyAdapter() {
             public void keyReleased(java.awt.event.KeyEvent evt) {
@@ -389,6 +419,7 @@ public class Client extends javax.swing.JFrame {
 
         jLabel2.setText("Host:");
 
+        jTextFieldServer.setBackground(MyColor.input);
         jTextFieldServer.setBorder(javax.swing.BorderFactory.createEmptyBorder(5, 5, 5, 5));
         jTextFieldServer.addKeyListener(new java.awt.event.KeyAdapter() {
             public void keyReleased(java.awt.event.KeyEvent evt) {
@@ -398,6 +429,7 @@ public class Client extends javax.swing.JFrame {
 
         jLabel3.setText("Port:");
 
+        jTextFieldPort.setBackground(MyColor.input);
         jTextFieldPort.setBorder(javax.swing.BorderFactory.createEmptyBorder(5, 5, 5, 5));
         jTextFieldPort.addKeyListener(new java.awt.event.KeyAdapter() {
             public void keyReleased(java.awt.event.KeyEvent evt) {
@@ -406,6 +438,7 @@ public class Client extends javax.swing.JFrame {
         });
 
         jToggleButtonConnect.setText("Kết nối");
+        jToggleButtonConnect.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
         jToggleButtonConnect.setEnabled(false);
         jToggleButtonConnect.addChangeListener(new javax.swing.event.ChangeListener() {
             public void stateChanged(javax.swing.event.ChangeEvent evt) {
@@ -423,6 +456,10 @@ public class Client extends javax.swing.JFrame {
 
         jLabelStatus.setForeground(new java.awt.Color(238, 118, 0));
         jLabelStatus.setText("Chưa kết nối");
+
+        jLabel6.setFont(new java.awt.Font("Dialog", 1, 25)); // NOI18N
+        jLabel6.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        jLabel6.setText("CLIENT");
 
         javax.swing.GroupLayout jPanel3Layout = new javax.swing.GroupLayout(jPanel3);
         jPanel3.setLayout(jPanel3Layout);
@@ -451,11 +488,14 @@ public class Client extends javax.swing.JFrame {
                         .addGap(18, 18, 18)
                         .addComponent(jToggleButtonConnect, javax.swing.GroupLayout.PREFERRED_SIZE, 130, javax.swing.GroupLayout.PREFERRED_SIZE)))
                 .addContainerGap())
+            .addComponent(jLabel6, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
         );
         jPanel3Layout.setVerticalGroup(
             jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel3Layout.createSequentialGroup()
                 .addContainerGap()
+                .addComponent(jLabel6, javax.swing.GroupLayout.PREFERRED_SIZE, 33, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel1)
                     .addComponent(jTextFieldFullName, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -471,26 +511,26 @@ public class Client extends javax.swing.JFrame {
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
+        jPanel4.setBackground(MyColor.white);
+
         jScrollPaneMessage.setViewportView(jListMessage);
 
         javax.swing.GroupLayout jPanel4Layout = new javax.swing.GroupLayout(jPanel4);
         jPanel4.setLayout(jPanel4Layout);
         jPanel4Layout.setHorizontalGroup(
             jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel4Layout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(jScrollPaneMessage)
-                .addContainerGap())
+            .addComponent(jScrollPaneMessage, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, 490, Short.MAX_VALUE)
         );
         jPanel4Layout.setVerticalGroup(
             jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel4Layout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(jScrollPaneMessage)
-                .addContainerGap())
+            .addComponent(jScrollPaneMessage)
         );
 
+        jPanel5.setBackground(MyColor.white);
+        jPanel5.setForeground(new java.awt.Color(255, 255, 255));
+
         jTextFieldInputChat.setEditable(false);
+        jTextFieldInputChat.setBackground(MyColor.input);
         jTextFieldInputChat.setFont(new java.awt.Font("Dialog", 0, 14)); // NOI18N
         jTextFieldInputChat.addKeyListener(new java.awt.event.KeyAdapter() {
             public void keyPressed(java.awt.event.KeyEvent evt) {
@@ -502,7 +542,11 @@ public class Client extends javax.swing.JFrame {
         });
 
         jButtonSend.setFont(new java.awt.Font("Dialog", 1, 18)); // NOI18N
-        jButtonSend.setText("Gửi");
+        jButtonSend.setIcon(new ImageIcon("src\\main\\java\\images\\icons8-send-32.png"));
+        jButtonSend.setToolTipText("Nhấn enter để gửi");
+        jButtonSend.setBorderPainted(false);
+        jButtonSend.setContentAreaFilled(false);
+        jButtonSend.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
         jButtonSend.setEnabled(false);
         jButtonSend.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -515,21 +559,22 @@ public class Client extends javax.swing.JFrame {
         jPanel5Layout.setHorizontalGroup(
             jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel5Layout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(jTextFieldInputChat, javax.swing.GroupLayout.DEFAULT_SIZE, 362, Short.MAX_VALUE)
+                .addComponent(jTextFieldInputChat)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jButtonSend, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(jButtonSend)
                 .addContainerGap())
         );
         jPanel5Layout.setVerticalGroup(
             jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel5Layout.createSequentialGroup()
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel5Layout.createSequentialGroup()
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jTextFieldInputChat, javax.swing.GroupLayout.PREFERRED_SIZE, 55, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jButtonSend, javax.swing.GroupLayout.PREFERRED_SIZE, 59, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                    .addComponent(jButtonSend, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(jTextFieldInputChat, javax.swing.GroupLayout.DEFAULT_SIZE, 55, Short.MAX_VALUE))
                 .addContainerGap())
         );
+
+        jPanel2.setBackground(MyColor.white);
 
         jLabel4.setFont(new java.awt.Font("Dialog", 1, 14)); // NOI18N
         jLabel4.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
@@ -562,6 +607,7 @@ public class Client extends javax.swing.JFrame {
         jComboBoxLanguage.setFocusable(false);
 
         jTextPaneTutorial.setEditable(false);
+        jTextPaneTutorial.setBackground(MyColor.input);
         jTextPaneTutorial.setFont(new java.awt.Font("DialogInput", 0, 14)); // NOI18N
         jTextPaneTutorial.setText("Chọn ngôn ngữ mà muốn sử dụng sau đó nhập vào nội dung bạn muốn chat với BOT\nVí dụ: Chọn Tiếng Việt, nhập vào \"Xin chào\", \"Hôm nay tôi buồn quá\"");
         jScrollPane2.setViewportView(jTextPaneTutorial);
@@ -578,23 +624,20 @@ public class Client extends javax.swing.JFrame {
             .addGroup(jPanel2Layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jLabel4, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(jLabel4, javax.swing.GroupLayout.DEFAULT_SIZE, 278, Short.MAX_VALUE)
+                    .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE)
                     .addGroup(jPanel2Layout.createSequentialGroup()
-                        .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 278, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addGroup(jPanel2Layout.createSequentialGroup()
-                                .addComponent(jRadioButtonWeather)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(jComboBoxDate, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE))
-                            .addComponent(jRadioButtonLocationIP)
-                            .addComponent(jRadioButtonPort)
-                            .addComponent(jRadioButtonSimsimi)
-                            .addGroup(jPanel2Layout.createSequentialGroup()
-                                .addGap(30, 30, 30)
-                                .addComponent(jLabel5)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(jComboBoxLanguage, javax.swing.GroupLayout.PREFERRED_SIZE, 105, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                        .addGap(0, 0, Short.MAX_VALUE)))
+                        .addComponent(jRadioButtonWeather)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(jComboBoxDate, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(jRadioButtonLocationIP)
+                    .addComponent(jRadioButtonPort)
+                    .addComponent(jRadioButtonSimsimi)
+                    .addGroup(jPanel2Layout.createSequentialGroup()
+                        .addGap(30, 30, 30)
+                        .addComponent(jLabel5)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(jComboBoxLanguage, javax.swing.GroupLayout.PREFERRED_SIZE, 105, javax.swing.GroupLayout.PREFERRED_SIZE)))
                 .addContainerGap())
         );
         jPanel2Layout.setVerticalGroup(
@@ -617,7 +660,7 @@ public class Client extends javax.swing.JFrame {
                     .addComponent(jComboBoxLanguage, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jLabel5))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 238, Short.MAX_VALUE)
+                .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 216, Short.MAX_VALUE)
                 .addContainerGap())
         );
 
@@ -636,11 +679,13 @@ public class Client extends javax.swing.JFrame {
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(jPanel2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
                 .addContainerGap())
+            .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                .addComponent(jPanelTop, javax.swing.GroupLayout.DEFAULT_SIZE, 798, Short.MAX_VALUE))
         );
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel1Layout.createSequentialGroup()
-                .addContainerGap()
+                .addGap(45, 45, 45)
                 .addComponent(jPanel3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -651,30 +696,25 @@ public class Client extends javax.swing.JFrame {
                     .addGroup(jPanel1Layout.createSequentialGroup()
                         .addComponent(jPanel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                         .addContainerGap())))
+            .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                .addGroup(jPanel1Layout.createSequentialGroup()
+                    .addComponent(jPanelTop, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addGap(0, 568, Short.MAX_VALUE)))
         );
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(layout.createSequentialGroup()
-                .addContainerGap()
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jLabel6, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                .addContainerGap())
+            .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, 800, Short.MAX_VALUE)
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(layout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(jLabel6)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addContainerGap())
+            .addComponent(jPanel1, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, 610, Short.MAX_VALUE)
         );
 
         pack();
+        setLocationRelativeTo(null);
     }// </editor-fold>//GEN-END:initComponents
 
     private void jToggleButtonConnectActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jToggleButtonConnectActionPerformed
@@ -712,6 +752,9 @@ public class Client extends javax.swing.JFrame {
             if (CheckSystaxInput(jTextFieldInputChat.getText())) {
                 SendData();
                 jTextFieldInputChat.setText("");
+            }else{
+                JOptionPane.showMessageDialog(jPanel1, "Sai cú pháp! Vui lòng kiểm tra lại","Lỗi",JOptionPane.ERROR_MESSAGE);
+                
             }
         }
     }//GEN-LAST:event_jTextFieldInputChatKeyPressed
@@ -735,6 +778,17 @@ public class Client extends javax.swing.JFrame {
         } else
             jButtonSend.setEnabled(false);
     }//GEN-LAST:event_jTextFieldInputChatKeyReleased
+
+    private void jPanelTopMousePressed(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jPanelTopMousePressed
+        x = evt.getX();
+        y = evt.getY();
+    }//GEN-LAST:event_jPanelTopMousePressed
+
+    private void jPanelTopMouseDragged(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jPanelTopMouseDragged
+        int xx = evt.getXOnScreen();
+        int yy = evt.getYOnScreen();
+        this.setLocation(xx - x, yy - y);
+    }//GEN-LAST:event_jPanelTopMouseDragged
 
     /**
      * @param args the command line arguments
@@ -781,12 +835,13 @@ public class Client extends javax.swing.JFrame {
     private javax.swing.JLabel jLabel6;
     private javax.swing.JLabel jLabelStatus;
     private javax.swing.JLabel jLabelStatusTitle;
-    private javax.swing.JList<String> jListMessage;
+    private javax.swing.JList<DataClient> jListMessage;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel2;
     private javax.swing.JPanel jPanel3;
     private javax.swing.JPanel jPanel4;
     private javax.swing.JPanel jPanel5;
+    private javax.swing.JPanel jPanelTop;
     private javax.swing.JRadioButton jRadioButtonLocationIP;
     private javax.swing.JRadioButton jRadioButtonPort;
     private javax.swing.JRadioButton jRadioButtonSimsimi;

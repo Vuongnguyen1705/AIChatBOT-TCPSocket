@@ -5,15 +5,16 @@ import com.google.gson.Gson;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.StringTokenizer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.swing.DefaultListModel;
-import javax.swing.JList;
 import javax.swing.JTextPane;
 import utils.MyString;
 import service.CallAPI;
@@ -28,38 +29,47 @@ public class WorkerServer extends Thread {
 
     private final Socket socket;
     private final JTextPane jTextPaneClientConnect;
-    private StringBuilder clientConnect = new StringBuilder();
+    private ArrayList<String> listClientConnect = new ArrayList<>();
+    private StringBuilder clientConn = new StringBuilder();
     private ObjectInputStream ois;
     private ObjectOutputStream oos;
     private boolean isRunning = false;
 
-    public WorkerServer(Socket socket, StringBuilder clientConnect, JTextPane jTextPaneClientConnect) {
+    public WorkerServer(Socket socket, ArrayList listClientConnect, JTextPane jTextPaneClientConnect) {
         this.socket = socket;
-        this.clientConnect = clientConnect;
+        this.listClientConnect = listClientConnect;
         this.jTextPaneClientConnect = jTextPaneClientConnect;
     }
 
     @Override
     public void run() {
-        xuLy();
+        Execute();
     }
 
-    private void xuLy() {
+    private void Execute() {
         try {
-            System.out.println(socket.getInetAddress().getHostName() + " - " + socket.getInetAddress().getHostAddress() + " - " + socket.getPort());
-            clientConnect.append(socket.getInetAddress().getHostName())
-                    .append(" - ")
-                    .append(socket.getInetAddress().getHostAddress())
-                    .append(" - ")
-                    .append(socket.getPort())
-                    .append("\n");
-            jTextPaneClientConnect.setText(clientConnect.toString());
+            String infoClient = socket.getInetAddress().getHostName() + " - " + socket.getInetAddress().getHostAddress() + " - " + socket.getPort() + "\n";
+            System.out.println(infoClient);
+            listClientConnect.add(infoClient);
+            listClientConnect.forEach((client) -> {
+                clientConn.append(client);
+            });
 
+            jTextPaneClientConnect.setText(clientConn.toString());
             ois = new ObjectInputStream(socket.getInputStream());
             oos = new ObjectOutputStream(socket.getOutputStream());
             isRunning = true;
-            while (isRunning) {
+            while (isRunning) {                                
                 HandleInputFromClient();
+            }
+            if (!isRunning) {
+                listClientConnect.remove(infoClient);
+                clientConn.replace(0, clientConn.length(), "");
+                listClientConnect.forEach((client) -> {
+                    clientConn.append(client);
+                });
+                System.out.println(clientConn);
+                jTextPaneClientConnect.setText(clientConn.toString());
             }
         } catch (IOException ex) {
             System.out.println(ex);
@@ -72,6 +82,7 @@ public class WorkerServer extends Thread {
             DataClient result = null;
             DataClient dataClient = (DataClient) ois.readObject();//Đọc dữ liệu từ client trả về object DataClient
             System.out.println(dataClient.getMessage());
+            SimpleDateFormat format = new SimpleDateFormat("hh:mm:ss");
             String option = dataClient.getOption();//lấy option của client gửi
             switch (option) {//check option
                 case MyString.WEATHER -> {
@@ -82,7 +93,6 @@ public class WorkerServer extends Thread {
                 }
                 case MyString.SCAN_PORT -> {
                     Date date = new Date();
-                    SimpleDateFormat format = new SimpleDateFormat("hh:mm:ss dd/MM/yyyy");
                     StringTokenizer token = new StringTokenizer(dataClient.getMessage(), ":");
                     String hostname = token.nextToken();
                     StringTokenizer portst = new StringTokenizer(token.nextToken(), ";");
@@ -101,32 +111,33 @@ public class WorkerServer extends Thread {
                             socketPort.close();
                         }
                     }
-                    result = new DataClient("<html>Scan Port", scanPort + "</html>", "", "", format.format(date));
+                    result = new DataClient(0, scanPort, "", "", format.format(date));
                 }
                 case MyString.SIMSIMI -> {
-                    Date date = new Date();
-                    SimpleDateFormat format = new SimpleDateFormat("hh:mm:ss dd/MM/yyyy");
-                    Respone res = ParseSimsimi(CallAPI.ResponeSimsimi(new Request(dataClient.getMessage(), dataClient.getOptionDetail())));
-                    if (res.getStatus() == null) {
-                        result = new DataClient("Simsimi", "Tôi không biết", "", "", format.format(date));
+                    if (CheckConnect("google.com")) {
+                        Date date = new Date();
+                        Respone res = ParseSimsimi(CallAPI.ResponeSimsimi(new Request(dataClient.getMessage(), dataClient.getOptionDetail())));
+                        if (res.getStatus() == null) {
+                            result = new DataClient(0, "Tôi không biết", "", "", format.format(date));
+                        } else {
+                            result = switch (res.getStatus()) {
+                                case 200 ->
+                                    new DataClient(0, res.getAtext(), "", "", format.format(date));
+                                case 429 ->
+                                    new DataClient(0, "Requesst đã đạt giới hạn", "", "", format.format(date));
+                                default ->
+                                    new DataClient(0, "Tôi không biết", "", "", format.format(date));
+                            };
+                        }
                     } else {
-                        result = switch (res.getStatus()) {
-                            case 200 ->
-                                new DataClient("Simsimi", res.getAtext(), "", "", format.format(date));
-                            case 429 ->
-                                new DataClient("Simsimi", "Requesst đã đạt giới hạn", "", "", format.format(date));
-                            default ->
-                                new DataClient("Simsimi", "Tôi không biết", "", "", format.format(date));
-                        };
+                        result = new DataClient(0, "Server mất kết nối Internet", "", "", "");
                     }
-
                 }
                 default -> {
                     result = dataClient;
                     isRunning = false;
                 }
             }
-//            oos = new ObjectOutputStream(socket.getOutputStream());
             oos.writeObject(result);
             oos.flush();
         } catch (IOException ex) {
@@ -143,5 +154,22 @@ public class WorkerServer extends Thread {
         Gson gson = new Gson();
         Respone respone = gson.fromJson(json, Respone.class);
         return respone;
+    }
+
+    private boolean CheckConnect(String host) {
+        try {
+            if (InetAddress.getByName(host).isReachable(5000)) {
+                System.out.println(host + " is reachable");
+                return true;
+            }
+        } catch (UnknownHostException ex) {
+            Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
+            return false;
+        } catch (IOException ex) {
+            Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
+            return false;
+        }
+        return false;
+
     }
 }
