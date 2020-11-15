@@ -86,7 +86,8 @@ public class WorkerServer extends Thread {
             String option = dataClient.getOption();//lấy option của client gửi
             switch (option) {//check option
                 case MyString.WEATHER -> {
-                    //Thời tiết
+                    SimpleDateFormat format = new SimpleDateFormat("hh:mm:ss dd/MM/yyyy");
+                    result=new DataClient("weather",CallAPI.jsonGetRequest(dataClient.getMessage()),"","",format.format(new Date()));
                 }
                 case MyString.LOCATION_IP -> {
                     //Vị trí IP

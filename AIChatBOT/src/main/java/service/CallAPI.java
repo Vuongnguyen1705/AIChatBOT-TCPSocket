@@ -79,6 +79,22 @@ public class CallAPI {
         }
         return response.body();
     }
+    public  static String jsonGetRequest(String location){
+        try {
+
+            Document doc=Jsoup.connect("https://api.openweathermap.org/data/2.5/weather?q="+location+"&appid=0d0ea27651db38d1d4fb5ffbb571b33a")
+                    .ignoreContentType(true)
+                    .ignoreHttpErrors(true)
+                    .get();
+            JSONObject object= (JSONObject) JSONValue.parse(doc.text());
+            JSONArray weather= (JSONArray) object.get("weather");
+            JsonObject weatherObj= (JsonObject) weather.get(0);
+            return weatherObj.get("description").toString();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return "location not found";
+    }
 //    public static void main(String[] args) {
 //        ResponeLocationIP("107.129.191.47");
 //    }
