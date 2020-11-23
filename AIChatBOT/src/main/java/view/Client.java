@@ -11,6 +11,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.text.SimpleDateFormat;
+import java.time.LocalTime;
 import java.util.Date;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -21,7 +22,9 @@ import javax.swing.JOptionPane;
 import javax.swing.JToggleButton;
 import javax.swing.border.LineBorder;
 import javax.swing.plaf.IconUIResource;
+import utils.CipherUtils;
 import utils.PatternRegEx;
+import utils.weatherString;
 
 /**
  *
@@ -38,6 +41,8 @@ public class Client extends javax.swing.JFrame {
     private final DefaultListModel<DataClient> model = new DefaultListModel<>();
     private volatile boolean isRunning = false;
     private int x, y;
+    private String key;
+    private boolean flagRemove = true;
 
     public Client() {
         initComponents();
@@ -52,10 +57,10 @@ public class Client extends javax.swing.JFrame {
     }
 
     private void EventRadioButton() {
-        String sWeather = "Chọn xem ngày hiện tại hoặc 7 ngày kế tiếp, sau đó nhập vào tên khu vực hoặc thành phố cần tra cứu\nVí dụ:Chọn Ngày hiện tại, nhập vào Long An, Ho Chi Minh City, Thủ Đức";
-        String sIP = "Nhập vào địa chỉ IP cần xác định vị trí\nVí dụ: 103.129.191.96\n*Lưu ý: Địa chỉ IP phải là địa chỉ public";
-        String sPort = "Nhập vào địa chỉ IP và khoảng giới hạn các port cần quét\nVí dụ: 192.168.123.123:1;100";
-        String sSimsimi = "Chọn ngôn ngữ mà muốn sử dụng để chat, sau đó nhập vào nội dung bạn muốn chat với BOT\nVí dụ: Chọn Tiếng Việt, nhập vào \"Xin chào\",\"Hôm nay tôi buồn quá\",\"Tôi có đẹp trai không?\"";
+        String sWeather = "<html>Chọn thời gian cần tra cứu thời tiết, sau đó nhập vào tên khu vực hoặc thành phố cần tra cứu<br><b style=\"color:#128A7C\">Ví dụ: </b>Chọn <b style=\"color:#128A7C\">Bây giờ</b>, nhập vào <b style=\"color:#128A7C\">Long An, Ho Chi Minh City, Thủ Đức</b></html>";
+        String sIP = "<html>Nhập vào địa chỉ IP cần xác định vị trí<br><b style=\"color:#128A7C\">Ví dụ: 103.129.191.96</b><br><b style=\"color:red\">*Lưu ý: Địa chỉ IP phải là địa chỉ public</b></html>";
+        String sPort = "<html>Nhập vào địa chỉ IP và khoảng giới hạn các port cần quét<br><b style=\"color:#128A7C\">Ví dụ: 192.168.123.123:1;100</b></html>";
+        String sSimsimi = "<html>Chọn ngôn ngữ mà muốn sử dụng để chat, sau đó nhập vào nội dung bạn muốn chat với BOT<br><b style=\"color:#128A7C\">Ví dụ: </b> Chọn <b style=\"color:#128A7C\">Tiếng Việt</b>, nhập vào <b style=\"color:#128A7C\">\"Xin chào\",\"Hôm nay là thứ mấy\"</b></html>";
 
         jRadioButtonWeather.addItemListener((e) -> {
             CheckInputByRadio();
@@ -130,6 +135,9 @@ public class Client extends javax.swing.JFrame {
                 try {
                     oos = new ObjectOutputStream(socket.getOutputStream());
                     ois = new ObjectInputStream(socket.getInputStream());
+                    key = LocalTime.now().toString();
+                    oos.writeObject(key);
+                    oos.flush();
                 } catch (IOException ex) {
                     Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
                 }
@@ -173,8 +181,10 @@ public class Client extends javax.swing.JFrame {
             jLabelStatus.setText("Chưa kết nối");
             jLabelStatus.setForeground(MyColor.orange);
             try {
-                oos.writeObject(new DataClient(1, MyString.EXIT_PROGRAM, "", "", ""));
+                oos.writeObject(new DataClient(1, "", MyString.EXIT_PROGRAM, "", "", ""));
                 oos.flush();
+                isRunning = false;
+                CloseConnect();
             } catch (IOException ex) {
                 Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
             }
@@ -231,18 +241,22 @@ public class Client extends javax.swing.JFrame {
             case MyString.WEATHER -> {
                 if (s.matches(PatternRegEx.patternCharacter)) {
                     jTextFieldInputChat.setBorder(new LineBorder(MyColor.green, 2));
+                    jButtonSend.setEnabled(true);
                     return true;
                 } else {
                     jTextFieldInputChat.setBorder(new LineBorder(MyColor.red, 2));
+                    jButtonSend.setEnabled(false);
                     return false;
                 }
             }
             case MyString.LOCATION_IP -> {
-                if (s.matches(PatternRegEx.patternIP)) {
+                if (s.matches(PatternRegEx.patternIP) || s.matches(PatternRegEx.patternIPV6)) {
                     jTextFieldInputChat.setBorder(new LineBorder(MyColor.green, 2));
+                    jButtonSend.setEnabled(true);
                     return true;
                 } else {
                     jTextFieldInputChat.setBorder(new LineBorder(MyColor.red, 2));
+                    jButtonSend.setEnabled(false);
                     return false;
                 }
             }
@@ -275,30 +289,52 @@ public class Client extends javax.swing.JFrame {
     }
 
     private void SetModelMessage(int type, String mess, String time) {
-        jListMessage.setCellRenderer(new Item());
-        model.addElement(new DataClient(type, mess, "", "", time));//thêm dữ liệu vào model chat
-        jListMessage.setModel(model);//set dữ liệu hiển thị lên list chat      
-        jListMessage.ensureIndexIsVisible(model.size() - 1);//cuộn list xuống tin nhắn mới nhất
+        // jListMessage.setCellRenderer(new Item());
+        model.addElement(new DataClient(type, "", mess, "", "", time));//thêm dữ liệu vào model chat
+//        jListMessage.setModel(model);//set dữ liệu hiển thị lên list chat      
+        jListMessage.ensureIndexIsVisible(model.size() - 1);//cuộn list xuống tin nhắn mới nhất     
     }
 
     private void SendData() {
+        flagRemove = true;
         Date date = new Date();
         SimpleDateFormat format = new SimpleDateFormat("hh:mm:ss");
-
+        String fullName = jTextFieldFullName.getText().trim();
         String message = jTextFieldInputChat.getText().trim();
+        String messageEnscript = CipherUtils.enString(message, key);
         String dateTime = format.format(date);
         String option = OptionRadioSelected();//kiểm tra tùy chọn chat
-        SetModelMessage(2, new MessHTML(message, "right", MyColor.bgMyMess, "white").toString(), dateTime);//set hiển thị tin nhắn     
-        SetModelMessage(1, new MessHTML("...", "left", MyColor.bgBotMess, "black").toString(), dateTime);
+        SetModelMessage(2, new MessHTML("", message, "right", MyColor.bgMyMess, "white").toString(), dateTime);//set hiển thị tin nhắn     
+        SetModelMessage(1, new MessHTML("", "...", "left", MyColor.bgBotMess, "black").toString(), dateTime);
         try {
             DataClient data = null;
             switch (option) {
                 case MyString.WEATHER -> {
+                    String time = null;
+                    switch (jComboBoxDate.getSelectedItem().toString()) {
+                        case "Bây giờ" -> {
+                            time = weatherString.NOW;
+                        }
+                        case "Hôm nay" -> {
+                            time = weatherString.TODAY;
+                        }
+                        case "3 ngày" -> {
+                            time = weatherString.THREEDAY;
+                        }
+                        case "5 ngày" -> {
+                            time = weatherString.FIVEDAY;
+                        }
+                        case "7 ngày" -> {
+                            time = weatherString.SEVENDAY;
+                        }
+                    }
+                    data = new DataClient(0, fullName, messageEnscript, option, time, dateTime);
                 }
                 case MyString.LOCATION_IP -> {
+                    data = new DataClient(0, fullName, messageEnscript, option, "", dateTime);
                 }
                 case MyString.SCAN_PORT -> {
-                    data = new DataClient(0, message, option, "", dateTime);
+                    data = new DataClient(0, fullName, messageEnscript, option, "", dateTime);
                 }
                 case MyString.SIMSIMI -> {
                     String lang = "";
@@ -307,7 +343,7 @@ public class Client extends javax.swing.JFrame {
                     } else {
                         lang = "en";
                     }
-                    data = new DataClient(0, message, option, lang, dateTime);
+                    data = new DataClient(0, fullName, messageEnscript, option, lang, dateTime);
                 }
             }
             oos.writeObject(data);
@@ -320,16 +356,20 @@ public class Client extends javax.swing.JFrame {
     private void ReceiveData() {
         try {
             DataClient data = (DataClient) ois.readObject();//đọc dữ liệu từ server
-            if (data.getMessage().equals(MyString.EXIT_PROGRAM)) {
-                isRunning = false;
-                CloseConnect();
-            } else {
-                model.remove(model.getSize() - 1);
-                SetModelMessage(1, new MessHTML(data.getMessage(), "left", MyColor.bgBotMess, "black").toString(), data.getDate());
-            }
+//            if (data.getMessage().equals(MyString.EXIT_PROGRAM)) {
+//                isRunning = false;
+//                CloseConnect();
+//            } else {
+                if (flagRemove == true) {
+                    model.remove(model.getSize() - 1);
+                    flagRemove = false;
+                }
+                SetModelMessage(1, new MessHTML(data.getName(), data.getMessage(), "left", MyColor.bgBotMess, "black").toString(), data.getDate());
+//            }
         } catch (IOException | ClassNotFoundException ex) {
-            System.err.println("Lỗiiii");
-            Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+            isRunning=false;
+//            System.err.println("Lỗiiii");
+//            Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
 
@@ -340,6 +380,9 @@ public class Client extends javax.swing.JFrame {
                 isRunning = true;
                 while (isRunning) {
                     ReceiveData();
+                }
+                if (jToggleButtonConnect.isSelected()) {
+                    jToggleButtonConnect.setSelected(false);
                 }
                 System.out.println("finish");
             }
@@ -513,6 +556,11 @@ public class Client extends javax.swing.JFrame {
 
         jPanel4.setBackground(MyColor.white);
 
+        jScrollPaneMessage.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(225, 225, 225), 2));
+
+        jListMessage.setModel(model);
+        jListMessage.setAutoscrolls(false);
+        jListMessage.setCellRenderer(new Item());
         jScrollPaneMessage.setViewportView(jListMessage);
 
         javax.swing.GroupLayout jPanel4Layout = new javax.swing.GroupLayout(jPanel4);
@@ -608,13 +656,14 @@ public class Client extends javax.swing.JFrame {
 
         jTextPaneTutorial.setEditable(false);
         jTextPaneTutorial.setBackground(MyColor.input);
+        jTextPaneTutorial.setContentType("text/html");
         jTextPaneTutorial.setFont(new java.awt.Font("DialogInput", 0, 14)); // NOI18N
-        jTextPaneTutorial.setText("Chọn ngôn ngữ mà muốn sử dụng sau đó nhập vào nội dung bạn muốn chat với BOT\nVí dụ: Chọn Tiếng Việt, nhập vào \"Xin chào\", \"Hôm nay tôi buồn quá\"");
+        jTextPaneTutorial.setText("<html>Chọn ngôn ngữ mà muốn sử dụng để chat, sau đó nhập vào nội dung bạn muốn chat với BOT<br><b style=\"color:#128A7C\">Ví dụ: </b> Chọn <b style=\"color:#128A7C\">Tiếng Việt</b>, nhập vào <b style=\"color:#128A7C\">\"Xin chào\",\"Hôm nay là thứ mấy\"</b></html>");
         jScrollPane2.setViewportView(jTextPaneTutorial);
 
         jLabel5.setText("Ngôn ngữ:");
 
-        jComboBoxDate.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Ngày hiện tại", "7 ngày" }));
+        jComboBoxDate.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Bây giờ", "Hôm nay", "3 ngày", "5 ngày", "7 ngày" }));
         jComboBoxDate.setEnabled(false);
 
         javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
@@ -706,11 +755,11 @@ public class Client extends javax.swing.JFrame {
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, 800, Short.MAX_VALUE)
+            .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jPanel1, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, 610, Short.MAX_VALUE)
+            .addComponent(jPanel1, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
         );
 
         pack();
@@ -752,9 +801,9 @@ public class Client extends javax.swing.JFrame {
             if (CheckSystaxInput(jTextFieldInputChat.getText())) {
                 SendData();
                 jTextFieldInputChat.setText("");
-            }else{
-                JOptionPane.showMessageDialog(jPanel1, "Sai cú pháp! Vui lòng kiểm tra lại","Lỗi",JOptionPane.ERROR_MESSAGE);
-                
+            } else {
+                JOptionPane.showMessageDialog(jPanel1, "Sai cú pháp! Vui lòng kiểm tra lại", "Lỗi", JOptionPane.ERROR_MESSAGE);
+
             }
         }
     }//GEN-LAST:event_jTextFieldInputChatKeyPressed

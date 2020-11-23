@@ -1,5 +1,6 @@
 package view;
 
+import DTO.InfoClient;
 import utils.MyColor;
 import java.awt.Color;
 import java.awt.Font;
@@ -9,6 +10,7 @@ import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Vector;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.logging.Level;
@@ -33,13 +35,33 @@ public class Server extends javax.swing.JFrame {
     private StringBuilder strContent = new StringBuilder();
     private ExecutorService executor;
     private boolean isRunning = false;
-    private ArrayList<String> clientConnect=new ArrayList<>();
-    private int x,y;
+    public static ArrayList<InfoClient> listClientConnect = new ArrayList<>();//danh sách các client đang kết nối
+    private Vector<WorkerServer> listWorker = new Vector<>();
+    private int x, y;
+
+    public Vector<WorkerServer> getListWorker() {
+        return listWorker;
+    }
+
+    public void setListWorker(Vector<WorkerServer> listWorker) {
+        this.listWorker = listWorker;
+    }
+
     public Server() {
         initComponents();
         jPanelTop.add(new TitleBar(this));
         setLocationRelativeTo(null);
         SetFont();
+        new Thread(() -> {
+            listWorker.forEach((item) -> {
+                try {
+                    System.out.println(item);
+                    Thread.sleep(1000);
+                } catch (InterruptedException ex) {
+                    Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            });
+        }).start();
 
     }
 
@@ -62,12 +84,13 @@ public class Server extends javax.swing.JFrame {
                 while (isRunning) {
                     try {
                         Socket socket = server.accept();
-                        executor.execute(new WorkerServer(socket,clientConnect, jTextPaneClientConnect));
+                        WorkerServer worker = new WorkerServer(socket, listClientConnect, jTextPaneClientConnect);
+                        listWorker.add(worker);
+                        executor.execute(worker);
                     } catch (IOException ex) {
                         break;
                     }
                 }
-                executor.shutdown();
                 System.out.println("finish");
             }
         }).start();

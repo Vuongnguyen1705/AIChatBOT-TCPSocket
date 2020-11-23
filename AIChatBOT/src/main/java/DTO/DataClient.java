@@ -9,13 +9,15 @@ import java.io.Serializable;
 public class DataClient implements Serializable {
 
     private int type;
+    private String name;
     private String message;
     private String option;
     private String optionDetail;
     private String date;
 
-    public DataClient(int type, String message, String option, String optionDetail, String date) {
+    public DataClient(int type, String name, String message, String option, String optionDetail, String date) {
         this.type = type;
+        this.name = name;
         this.message = message;
         this.option = option;
         this.optionDetail = optionDetail;
@@ -28,7 +30,15 @@ public class DataClient implements Serializable {
 
     public void setType(int type) {
         this.type = type;
-    }    
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
 
     public String getMessage() {
         return message;
