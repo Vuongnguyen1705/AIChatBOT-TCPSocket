@@ -120,10 +120,10 @@ public class CallAPI {
                     lon = (double) coord.get("lon");
                     lat = (double) coord.get("lat");
                 } catch (Exception e) {
-                    long lo=(long) coord.get("lon");
-                    long la=(long) coord.get("lat");
-                    lon=lo;
-                    lat=la;
+                    long lo = (long) coord.get("lon");
+                    long la = (long) coord.get("lat");
+                    lon = lo;
+                    lat = la;
                 }
                 name = (String) object.get("name");
             }
@@ -153,16 +153,18 @@ public class CallAPI {
         }
         return response.body();
     }
-private static WeatherForecast ParseWeather(String json) {
+
+    private static WeatherForecast ParseWeather(String json) {
         Gson gson = new Gson();
         WeatherForecast weatherForecast = gson.fromJson(json, WeatherForecast.class);
         return weatherForecast;
     }
+
     public static void main(String[] args) {
 //        System.out.println(GetCoordinates("longan").getLatitude()+"--"+GetCoordinates("longan").getLongitude()+"--"+GetCoordinates("longan").getName());
 //        System.out.println(GetWeatherForecast("saigon"));
 //        System.out.println(GetCoordinates("bangkok").getLatitude());
-        System.out.println(ParseWeather(GetWeatherForecast("di an")).getDaily().get(0).getRain());
+        System.out.println(ParseWeather(GetWeatherForecast("saigon")));
     }
 
 }

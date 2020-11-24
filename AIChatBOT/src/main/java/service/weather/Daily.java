@@ -45,9 +45,9 @@ public class Daily {
     @SerializedName("pop")
     @Expose
     private Double pop;
-    @SerializedName("rain")
-    @Expose
-    private Double rain=0.0;
+//    @SerializedName("rain")
+//    @Expose
+//    private Double rain=0.0;
     @SerializedName("uvi")
     @Expose
     private Double uvi;
@@ -221,18 +221,18 @@ public class Daily {
         return this;
     }
 
-    public Double getRain() {
-        return rain;
-    }
-
-    public void setRain(Double rain) {
-        this.rain = rain;
-    }
-
-    public Daily withRain(Double rain) {
-        this.rain = rain;
-        return this;
-    }
+//    public Double getRain() {
+//        return rain;
+//    }
+//
+//    public void setRain(Double rain) {
+//        this.rain = rain;
+//    }
+//
+//    public Daily withRain(Double rain) {
+//        this.rain = rain;
+//        return this;
+//    }
 
     public Double getUvi() {
         return uvi;

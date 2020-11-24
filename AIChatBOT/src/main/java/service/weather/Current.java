@@ -17,7 +17,7 @@ public class Current {
     private Integer sunset;
     @SerializedName("temp")
     @Expose
-    private Integer temp;
+    private double temp;
     @SerializedName("feels_like")
     @Expose
     private Double feelsLike;
@@ -88,7 +88,7 @@ public class Current {
         return this;
     }
 
-    public Integer getTemp() {
+    public double getTemp() {
         return temp;
     }
 
