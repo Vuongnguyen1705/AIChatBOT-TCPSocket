@@ -52,17 +52,6 @@ public class Server extends javax.swing.JFrame {
         jPanelTop.add(new TitleBar(this));
         setLocationRelativeTo(null);
         SetFont();
-        new Thread(() -> {
-            listWorker.forEach((item) -> {
-                try {
-                    System.out.println(item);
-                    Thread.sleep(1000);
-                } catch (InterruptedException ex) {
-                    Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
-                }
-            });
-        }).start();
-
     }
 
     private boolean OpenServer(int port) {

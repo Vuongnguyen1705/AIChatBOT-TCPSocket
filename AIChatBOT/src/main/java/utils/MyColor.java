@@ -14,6 +14,6 @@ public class MyColor {
     public static Color titleBar = new Color(18, 138, 124);
     public static Color input = new Color(242, 242, 242);
     public static Color white = new Color(255, 255, 255);
-    public static String bgMyMess = "0084FF";
+    public static String bgMyMess = "831DD4";
     public static String bgBotMess = "F1F0F0";
 }
