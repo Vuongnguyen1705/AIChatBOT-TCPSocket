@@ -119,7 +119,7 @@ public class WorkerServer extends Thread {
             System.out.println(dataClient.getName() + ": " + dataClient.getMessage());
             dataClient.setMessage(CipherUtils.deString(dataClient.getMessage(), key));
             System.out.println(dataClient.getName() + ": deScriptMess:" + dataClient.getMessage());
-            SimpleDateFormat format = new SimpleDateFormat("hh:mm:ss");
+            SimpleDateFormat format = new SimpleDateFormat("HH:mm:ss");
             String option = dataClient.getOption();//lấy option của client gửi
             boolean flagWeather = true;
             switch (option) {//check option
@@ -135,7 +135,7 @@ public class WorkerServer extends Thread {
                                 String forecast = "";
                                 switch (dataClient.getOptionDetail()) {
                                     case weatherString.NOW -> {
-                                        forecast = "<html><b style=\"text-align: center;color:blue\">" + coordinates.getName() + "</b><br>"
+                                        forecast = "<html><b style=\"text-align: center;color:#3300AA\">" + coordinates.getName() + "</b><br>"
                                                 + rowWeather("Thời gian", MyConvert.convertTimeToHours(weather.getCurrent().getDt().toString()))
                                                 + rowWeather("Nhiệt độ", weather.getCurrent().getTemp() + " độ C")
                                                 + rowWeather("Thời tiết", weather.getCurrent().getWeather().get(0).getDescription())
@@ -146,10 +146,10 @@ public class WorkerServer extends Thread {
                                                 + rowWeather("Tốc độ gió", weather.getCurrent().getWindSpeed() + "m/s")
                                                 + rowWeather("Chỉ số UV", weather.getCurrent().getUvi().toString())
                                                 + "</html>";
-                                        result = new DataClient(0, "Weather", forecast, "", "", format.format(date));
+                                        result = new DataClient(0, "Weather", CipherUtils.enString(forecast, key), "", "", format.format(date));
                                     }
                                     case weatherString.TODAY -> {
-                                        forecast = "<html><b style=\"text-align: center;color:blue\">" + coordinates.getName() + "</b><br>"
+                                        forecast = "<html><b style=\"text-align: center;color:#3300AA\">" + coordinates.getName() + "</b><br>"
                                                 + rowWeather("Thời gian", MyConvert.convertTime(weather.getDaily().get(0).getDt().toString()))
                                                 + rowWeather("Bình minh", MyConvert.convertTimeToHours(weather.getDaily().get(0).getSunrise().toString()))
                                                 + rowWeather("Hoàng hôn", MyConvert.convertTimeToHours(weather.getDaily().get(0).getSunset().toString()))
@@ -164,11 +164,11 @@ public class WorkerServer extends Thread {
                                                 + rowWeather("Chỉ số UV", weather.getDaily().get(0).getUvi().toString())
                                                 + "</html>";
 
-                                        result = new DataClient(0, "Weather", forecast, "", "", format.format(date));
+                                        result = new DataClient(0, "Weather", CipherUtils.enString(forecast, key), "", "", format.format(date));
                                     }
                                     case weatherString.THREEDAY -> {
                                         for (int i = 1; i <= 3; i++) {
-                                            forecast = "<html><b style=\"text-align: center;color:blue\">" + coordinates.getName() + "</b><br>"
+                                            forecast = "<html><b style=\"text-align: center;color:#3300AA\">" + coordinates.getName() + "</b><br>"
                                                     + rowWeather("Thời gian", MyConvert.convertTime(weather.getDaily().get(i).getDt().toString()))
                                                     + rowWeather("Thời tiết", weather.getDaily().get(i).getWeather().get(0).getDescription())
                                                     + rowWeather("Nhiệt độ cao nhất", weather.getDaily().get(i).getTemp().getMax() + " độ C")
@@ -176,7 +176,7 @@ public class WorkerServer extends Thread {
                                                     + rowWeather("Độ ẩm", weather.getDaily().get(i).getHumidity() + "%")
                                                     + rowWeather("Tốc độ gió", weather.getDaily().get(i).getWindSpeed() + "m/s")
                                                     + "</html>";
-                                            result = new DataClient(0, "Weather", forecast, "", "", format.format(date));
+                                            result = new DataClient(0, "Weather", CipherUtils.enString(forecast, key), "", "", format.format(date));
                                             oos.writeObject(result);
                                             oos.flush();
                                         }
@@ -184,7 +184,7 @@ public class WorkerServer extends Thread {
                                     }
                                     case weatherString.FIVEDAY -> {
                                         for (int i = 1; i <= 5; i++) {
-                                            forecast = "<html><b style=\"text-align: center;color:blue\">" + coordinates.getName() + "</b><br>"
+                                            forecast = "<html><b style=\"text-align: center;color:#3300AA\">" + coordinates.getName() + "</b><br>"
                                                     + rowWeather("Thời gian", MyConvert.convertTime(weather.getDaily().get(i).getDt().toString()))
                                                     + rowWeather("Thời tiết", weather.getDaily().get(i).getWeather().get(0).getDescription())
                                                     + rowWeather("Nhiệt độ cao nhất", weather.getDaily().get(i).getTemp().getMax() + " độ C")
@@ -192,7 +192,7 @@ public class WorkerServer extends Thread {
                                                     + rowWeather("Độ ẩm", weather.getDaily().get(i).getHumidity() + "%")
                                                     + rowWeather("Tốc độ gió", weather.getDaily().get(i).getWindSpeed() + "m/s")
                                                     + "</html>";
-                                            result = new DataClient(0, "Weather", forecast, "", "", format.format(date));
+                                            result = new DataClient(0, "Weather", CipherUtils.enString(forecast, key), "", "", format.format(date));
                                             oos.writeObject(result);
                                             oos.flush();
                                         }
@@ -200,7 +200,7 @@ public class WorkerServer extends Thread {
                                     }
                                     case weatherString.SEVENDAY -> {
                                         for (int i = 1; i < weather.getDaily().size(); i++) {
-                                            forecast = "<html><b style=\"text-align: center;color:blue;\">" + coordinates.getName() + "</b><br>"
+                                            forecast = "<html><b style=\"text-align: center;color:#3300AA;\">" + coordinates.getName() + "</b><br>"
                                                     + rowWeather("Thời gian", MyConvert.convertTime(weather.getDaily().get(i).getDt().toString()))
                                                     + rowWeather("Thời tiết", weather.getDaily().get(i).getWeather().get(0).getDescription())
                                                     + rowWeather("Nhiệt độ cao nhất", weather.getDaily().get(i).getTemp().getMax() + " độ C")
@@ -208,7 +208,7 @@ public class WorkerServer extends Thread {
                                                     + rowWeather("Độ ẩm", weather.getDaily().get(i).getHumidity() + "%")
                                                     + rowWeather("Tốc độ gió", weather.getDaily().get(i).getWindSpeed() + "m/s")
                                                     + "</html>";
-                                            result = new DataClient(0, "Weather", forecast, "", "", format.format(date));
+                                            result = new DataClient(0, "Weather", CipherUtils.enString(forecast, key), "", "", format.format(date));
                                             oos.writeObject(result);
                                             oos.flush();
                                         }
@@ -216,13 +216,13 @@ public class WorkerServer extends Thread {
                                     }
                                 }
                             } else {
-                                result = new DataClient(0, "Weather", "Không tìm thấy địa điểm", "", "", "");
+                                result = new DataClient(0, "Weather", CipherUtils.enString("Không tìm thấy địa điểm", key), "", "", "");
                             }
                         } catch (Exception e) {
-                            result = new DataClient(0, "Weather", "Server mất quá nhiều thời gian để phản hồi", "", "", "");
+                            result = new DataClient(0, "Weather", CipherUtils.enString("<html><div style=\"color:orange\">Server mất quá nhiều thời gian để phản hồi</div></html>", key), "", "", "");
                         }
                     } else {
-                        result = new DataClient(0, "Weather", "Server mất kết nối Internet", "", "", "");
+                        result = new DataClient(0, "Weather", CipherUtils.enString("Server mất kết nối Internet", key), "", "", "");
                     }
                     if (flagWeather == true) {
                         oos.writeObject(result);
@@ -235,16 +235,16 @@ public class WorkerServer extends Thread {
                         try {
                             LocationIP locationIP = ParseLocationIP(CallAPI.GetLocationIP(dataClient.getMessage()));
                             if (locationIP.getType() == null) {
-                                result = new DataClient(0, "Location IP", "Không tìm thấy vị trí của IP này", "", "", format.format(date));
+                                result = new DataClient(0, "Location IP", CipherUtils.enString("Không tìm thấy vị trí của IP này", key), "", "", format.format(date));
                             } else {
                                 String location = "<html>" + rowWeather("IP", dataClient.getMessage()) + rowWeather("Kinh độ", locationIP.getLongitude().toString()) + rowWeather("Vĩ độ", locationIP.getLatitude().toString()) + rowWeather("Địa điểm", locationIP.getCity());
-                                result = new DataClient(0, "Location IP", location, "", "", format.format(date));
+                                result = new DataClient(0, "Location IP", CipherUtils.enString(location, key), "", "", format.format(date));
                             }
                         } catch (Exception e) {
-                            result = new DataClient(0, "Location IP", "Server mất quá nhiều thời gian để phản hồi", "", "", "");
+                            result = new DataClient(0, "Location IP", CipherUtils.enString("<html><div style=\"color:orange\">Server mất quá nhiều thời gian để phản hồi</div></html>", key), "", "", "");
                         }
                     } else {
-                        result = new DataClient(0, "Location IP", "Server mất kết nối Internet", "", "", "");
+                        result = new DataClient(0, "Location IP",CipherUtils.enString( "<html><div style=\"color:red\">Server mất kết nối Internet</div></html>", key), "", "", "");
                     }
                     oos.writeObject(result);
                     oos.flush();
@@ -261,12 +261,12 @@ public class WorkerServer extends Thread {
                         Socket socketPort = new Socket();
                         try {
                             socketPort.connect(new InetSocketAddress(hostname, port), 200);
-                            scanPort = "Port " + port + " <b style=\"color:#31255A\" >is opened</b><br/>";
-                            result = new DataClient(0, "Port", scanPort, "", "", format.format(date));
+                            scanPort = "Port " + port + " <b style=\"color:#339900\" >is opened</b><br/>";
+                            result = new DataClient(0, "Port", CipherUtils.enString(scanPort, key), "", "", format.format(date));
                             socketPort.close();
                         } catch (IOException ex) {
                             scanPort = "Port " + port + " <b style=\"color:#C60000\">is closed</b><br/>";
-                            result = new DataClient(0, "Port", scanPort, "", "", format.format(date));
+                            result = new DataClient(0, "Port", CipherUtils.enString(scanPort, key), "", "", format.format(date));
                         } finally {
                             socketPort.close();
                         }
@@ -284,17 +284,17 @@ public class WorkerServer extends Thread {
                             Response res = ParseSimsimi(CallAPI.GetSimsimi(request));
                             result = switch (CallAPI.GetStatusCodeSimsimi(request)) {
                                 case 200 ->
-                                    new DataClient(0, "Simsimi", res.getAtext(), "", "", format.format(date));
+                                    new DataClient(0, "Simsimi", CipherUtils.enString(res.getAtext(), key), "", "", format.format(date));
                                 case 429 ->
-                                    new DataClient(0, "Simsimi", "Request đã đạt giới hạn", "", "", format.format(date));
+                                    new DataClient(0, "Simsimi", CipherUtils.enString("Request đã đạt giới hạn", key), "", "", format.format(date));
                                 default ->
-                                    new DataClient(0, "Simsimi", "Tôi không biết", "", "", format.format(date));
+                                    new DataClient(0, "Simsimi", CipherUtils.enString("Tôi không biết", key), "", "", format.format(date));
                             };
                         } catch (Exception e) {
-                            result = new DataClient(0, "Simsimi", "Server mất quá nhiều thời gian để phản hồi", "", "", "");
+                            result = new DataClient(0, "Simsimi", CipherUtils.enString("<html><div style=\"color:orange\">Server mất quá nhiều thời gian để phản hồi</div></html>", key), "", "", "");
                         }
                     } else {
-                        result = new DataClient(0, "Simsimi", "Server mất kết nối Internet", "", "", "");
+                        result = new DataClient(0, "Simsimi", CipherUtils.enString("<html><div style=\"color:red\">Server mất kết nối Internet</div></html>", key), "", "", "");
                     }
                     System.out.println(result.getMessage());
                     oos.writeObject(result);
@@ -318,7 +318,7 @@ public class WorkerServer extends Thread {
     }
 
     private String rowWeather(String title, String content) {
-        return title + ": <b style=\"color:#31255A\">" + content + "</b><br>";
+        return title + ": <b style=\"color:#6633FF\">" + content + "</b><br>";
     }
 
     private Response ParseSimsimi(String json) {

@@ -11,17 +11,14 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.text.SimpleDateFormat;
-import java.time.LocalTime;
 import java.util.Date;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.DefaultListModel;
-import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JOptionPane;
 import javax.swing.JToggleButton;
 import javax.swing.border.LineBorder;
-import javax.swing.plaf.IconUIResource;
 import utils.CipherUtils;
 import utils.PatternRegEx;
 import utils.weatherString;
@@ -59,7 +56,7 @@ public class Client extends javax.swing.JFrame {
     private void EventRadioButton() {
         String sWeather = "<html>Chọn thời gian cần tra cứu thời tiết, sau đó nhập vào tên khu vực hoặc thành phố cần tra cứu<br><b style=\"color:#128A7C\">Ví dụ: </b>Chọn <b style=\"color:#128A7C\">Bây giờ</b>, nhập vào <b style=\"color:#128A7C\">Long An, Ho Chi Minh City, Thủ Đức</b></html>";
         String sIP = "<html>Nhập vào địa chỉ IP cần xác định vị trí<br><b style=\"color:#128A7C\">Ví dụ: 103.129.191.96</b><br><b style=\"color:red\">*Lưu ý: Địa chỉ IP phải là địa chỉ public</b></html>";
-        String sPort = "<html>Nhập vào địa chỉ IP và khoảng giới hạn các port cần quét<br><b style=\"color:#128A7C\">Ví dụ: 192.168.123.123:1;100</b></html>";
+        String sPort = "<html>Nhập vào địa chỉ IP và khoảng giới hạn các port cần quét theo cú pháp: ip/domain:port bắt đầu;port kết thúc<br><b style=\"color:#128A7C\">Ví dụ: 192.168.123.123:1;10 thongtindaotao.sgu.edu.vn:440;450</b></html>";
         String sSimsimi = "<html>Chọn ngôn ngữ mà muốn sử dụng để chat, sau đó nhập vào nội dung bạn muốn chat với BOT<br><b style=\"color:#128A7C\">Ví dụ: </b> Chọn <b style=\"color:#128A7C\">Tiếng Việt</b>, nhập vào <b style=\"color:#128A7C\">\"Xin chào\",\"Hôm nay là thứ mấy\"</b></html>";
 
         jRadioButtonWeather.addItemListener((e) -> {
@@ -135,7 +132,7 @@ public class Client extends javax.swing.JFrame {
                 try {
                     oos = new ObjectOutputStream(socket.getOutputStream());
                     ois = new ObjectInputStream(socket.getInputStream());
-                    key = LocalTime.now().toString();
+                    key = String.valueOf(System.currentTimeMillis());
                     oos.writeObject(key);
                     oos.flush();
                 } catch (IOException ex) {
@@ -261,7 +258,7 @@ public class Client extends javax.swing.JFrame {
                 }
             }
             case MyString.SCAN_PORT -> {
-                if (s.matches(PatternRegEx.patternInputScanPort)) {
+                if (s.matches(PatternRegEx.patternInputScanPort)|| s.matches(PatternRegEx.patternDomain)) {
                     String[] arr = s.split(":");
                     String[] arr1 = arr[1].split(";");
                     if (Integer.parseInt(arr1[0]) > Integer.parseInt(arr1[1])) {
@@ -298,7 +295,7 @@ public class Client extends javax.swing.JFrame {
     private void SendData() {
         flagRemove = true;
         Date date = new Date();
-        SimpleDateFormat format = new SimpleDateFormat("hh:mm:ss");
+        SimpleDateFormat format = new SimpleDateFormat("HH:mm:ss");
         String fullName = jTextFieldFullName.getText().trim();
         String message = jTextFieldInputChat.getText().trim();
         String messageEnscript = CipherUtils.enString(message, key);
@@ -364,7 +361,8 @@ public class Client extends javax.swing.JFrame {
                     model.remove(model.getSize() - 1);
                     flagRemove = false;
                 }
-                SetModelMessage(1, new MessHTML(data.getName(), data.getMessage(), "left", MyColor.bgBotMess, "black").toString(), data.getDate());
+                String messDescript=CipherUtils.deString(data.getMessage(), key);
+                SetModelMessage(1, new MessHTML(data.getName(), messDescript , "left", MyColor.bgBotMess, "black").toString(), data.getDate());
 //            }
         } catch (IOException | ClassNotFoundException ex) {
             isRunning=false;
