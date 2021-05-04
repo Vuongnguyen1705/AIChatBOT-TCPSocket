@@ -38,7 +38,7 @@ public class Client extends javax.swing.JFrame {
     private final DefaultListModel<DataClient> model = new DefaultListModel<>();
     private volatile boolean isRunning = false;
     private int x, y;
-    private String key;
+    private String key;    
     private boolean flagRemove = true;
 
     public Client() {
@@ -133,7 +133,11 @@ public class Client extends javax.swing.JFrame {
                     oos = new ObjectOutputStream(socket.getOutputStream());
                     ois = new ObjectInputStream(socket.getInputStream());
                     key = String.valueOf(System.currentTimeMillis());
-                    oos.writeObject(key);
+                    System.out.println("key: " + key);
+                    String keyEncrypt = CipherUtils.enCryptKey("laptrinhmang",key);
+                    System.out.println("key encrypt: " + keyEncrypt);
+
+                    oos.writeObject(keyEncrypt);
                     oos.flush();
                 } catch (IOException ex) {
                     Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
@@ -258,7 +262,7 @@ public class Client extends javax.swing.JFrame {
                 }
             }
             case MyString.SCAN_PORT -> {
-                if (s.matches(PatternRegEx.patternInputScanPort)|| s.matches(PatternRegEx.patternDomain)) {
+                if (s.matches(PatternRegEx.patternInputScanPort) || s.matches(PatternRegEx.patternDomain)) {
                     String[] arr = s.split(":");
                     String[] arr1 = arr[1].split(";");
                     if (Integer.parseInt(arr1[0]) > Integer.parseInt(arr1[1])) {
@@ -357,15 +361,15 @@ public class Client extends javax.swing.JFrame {
 //                isRunning = false;
 //                CloseConnect();
 //            } else {
-                if (flagRemove == true) {
-                    model.remove(model.getSize() - 1);
-                    flagRemove = false;
-                }
-                String messDescript=CipherUtils.deString(data.getMessage(), key);
-                SetModelMessage(1, new MessHTML(data.getName(), messDescript , "left", MyColor.bgBotMess, "black").toString(), data.getDate());
+            if (flagRemove == true) {
+                model.remove(model.getSize() - 1);
+                flagRemove = false;
+            }
+            String messDescript = CipherUtils.deString(data.getMessage(), key);
+            SetModelMessage(1, new MessHTML(data.getName(), messDescript, "left", MyColor.bgBotMess, "black").toString(), data.getDate());
 //            }
         } catch (IOException | ClassNotFoundException ex) {
-            isRunning=false;
+            isRunning = false;
 //            System.err.println("Lỗiiii");
 //            Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
         }
